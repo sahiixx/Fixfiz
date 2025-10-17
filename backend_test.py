@@ -2450,6 +2450,348 @@ class BackendTester:
         except Exception as e:
             self.log_test("CRM Integrations - Webhook", False, f"Exception: {str(e)}")
             return False
+
+    # ================================================================================================
+    # PHASE 5B-D INTEGRATION TESTS - PAYMENTS, COMMUNICATIONS, AI
+    # ================================================================================================
+    
+    async def test_stripe_payment_packages(self):
+        """Test GET /api/integrations/payments/packages - Get payment packages"""
+        try:
+            async with self.session.get(f"{API_BASE}/integrations/payments/packages") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "packages" in data.get("data", {}):
+                        packages = data["data"]["packages"]
+                        # Should contain Starter, Growth, Enterprise packages
+                        if len(packages) >= 3:
+                            # Check for AED currency
+                            has_aed = any("AED" in str(pkg.get("price", "")) for pkg in packages)
+                            if has_aed:
+                                self.log_test("Stripe Payment - Get Packages", True, f"Retrieved {len(packages)} payment packages with AED pricing")
+                                return True
+                            else:
+                                self.log_test("Stripe Payment - Get Packages", False, "No AED pricing found in packages", data)
+                                return False
+                        else:
+                            self.log_test("Stripe Payment - Get Packages", False, f"Expected 3+ packages, got {len(packages)}", data)
+                            return False
+                    else:
+                        self.log_test("Stripe Payment - Get Packages", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Stripe Payment - Get Packages", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Stripe Payment - Get Packages", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_stripe_create_session(self):
+        """Test POST /api/integrations/payments/create-session - Create checkout session"""
+        try:
+            session_data = {
+                "package_id": "starter",
+                "host_url": "https://test.example.com",
+                "metadata": {
+                    "customer_id": "test_dubai_123"
+                }
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/integrations/payments/create-session",
+                json=session_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "session_id" in data.get("data", {}) and "url" in data.get("data", {}):
+                        session_id = data["data"]["session_id"]
+                        checkout_url = data["data"]["url"]
+                        # Store session_id for status test
+                        self.stripe_session_id = session_id
+                        self.log_test("Stripe Payment - Create Session", True, f"Checkout session created: {session_id}")
+                        return True
+                    else:
+                        self.log_test("Stripe Payment - Create Session", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Stripe Payment - Create Session", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Stripe Payment - Create Session", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_stripe_payment_status(self):
+        """Test GET /api/integrations/payments/status/{session_id} - Get payment status"""
+        try:
+            # Use session_id from previous test or create a test one
+            if not hasattr(self, 'stripe_session_id'):
+                await self.test_stripe_create_session()
+            
+            if not hasattr(self, 'stripe_session_id'):
+                self.log_test("Stripe Payment - Get Status", False, "No session ID available")
+                return False
+            
+            async with self.session.get(f"{API_BASE}/integrations/payments/status/{self.stripe_session_id}") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "status" in data.get("data", {}):
+                        payment_status = data["data"]["status"]
+                        self.log_test("Stripe Payment - Get Status", True, f"Payment status retrieved: {payment_status}")
+                        return True
+                    else:
+                        self.log_test("Stripe Payment - Get Status", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Stripe Payment - Get Status", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Stripe Payment - Get Status", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_twilio_send_otp(self):
+        """Test POST /api/integrations/sms/send-otp - Send OTP via SMS"""
+        try:
+            otp_data = {
+                "phone_number": "+971501234567"
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/integrations/sms/send-otp",
+                json=otp_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success"):
+                        self.log_test("Twilio SMS - Send OTP", True, "OTP sent successfully (test mode)")
+                        return True
+                    else:
+                        self.log_test("Twilio SMS - Send OTP", False, "OTP sending failed", data)
+                        return False
+                else:
+                    self.log_test("Twilio SMS - Send OTP", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Twilio SMS - Send OTP", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_twilio_verify_otp(self):
+        """Test POST /api/integrations/sms/verify-otp - Verify OTP code"""
+        try:
+            verify_data = {
+                "phone_number": "+971501234567",
+                "code": "123456"  # Test mode should accept this
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/integrations/sms/verify-otp",
+                json=verify_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success"):
+                        self.log_test("Twilio SMS - Verify OTP", True, "OTP verified successfully (test mode)")
+                        return True
+                    else:
+                        self.log_test("Twilio SMS - Verify OTP", False, "OTP verification failed", data)
+                        return False
+                else:
+                    self.log_test("Twilio SMS - Verify OTP", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Twilio SMS - Verify OTP", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_twilio_send_sms(self):
+        """Test POST /api/integrations/sms/send - Send SMS message"""
+        try:
+            sms_data = {
+                "to_number": "+971501234567",
+                "message": "Test message from NOWHERE Digital Platform"
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/integrations/sms/send",
+                json=sms_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success"):
+                        self.log_test("Twilio SMS - Send Message", True, "SMS sent successfully (test mode)")
+                        return True
+                    else:
+                        self.log_test("Twilio SMS - Send Message", False, "SMS sending failed", data)
+                        return False
+                else:
+                    self.log_test("Twilio SMS - Send Message", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Twilio SMS - Send Message", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_sendgrid_send_email(self):
+        """Test POST /api/integrations/email/send - Send custom email"""
+        try:
+            email_data = {
+                "to_email": "test@dubaitech.ae",
+                "subject": "Test Email",
+                "html_content": "<h1>Test</h1><p>This is a test email from NOWHERE Digital.</p>"
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/integrations/email/send",
+                json=email_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success"):
+                        self.log_test("SendGrid Email - Send Custom", True, "Email sent successfully (test mode)")
+                        return True
+                    else:
+                        self.log_test("SendGrid Email - Send Custom", False, "Email sending failed", data)
+                        return False
+                else:
+                    self.log_test("SendGrid Email - Send Custom", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("SendGrid Email - Send Custom", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_sendgrid_send_notification(self):
+        """Test POST /api/integrations/email/send-notification - Send notification email"""
+        try:
+            notification_data = {
+                "to_email": "admin@dubaitech.ae",
+                "type": "welcome",
+                "data": {
+                    "message": "Welcome to NOWHERE Digital Platform!",
+                    "details": "Your account has been created successfully."
+                }
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/integrations/email/send-notification",
+                json=notification_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success"):
+                        self.log_test("SendGrid Email - Send Notification", True, "Notification email sent successfully (test mode)")
+                        return True
+                    else:
+                        self.log_test("SendGrid Email - Send Notification", False, "Notification email sending failed", data)
+                        return False
+                else:
+                    self.log_test("SendGrid Email - Send Notification", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("SendGrid Email - Send Notification", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_voice_ai_session(self):
+        """Test POST /api/integrations/voice-ai/session - Create voice AI session"""
+        try:
+            async with self.session.post(
+                f"{API_BASE}/integrations/voice-ai/session",
+                json={},
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "session_id" in data.get("data", {}):
+                        session_id = data["data"]["session_id"]
+                        self.log_test("Voice AI - Create Session", True, f"Voice AI session created: {session_id}")
+                        return True
+                    else:
+                        self.log_test("Voice AI - Create Session", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Voice AI - Create Session", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Voice AI - Create Session", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_voice_ai_info(self):
+        """Test GET /api/integrations/voice-ai/info - Get voice AI info"""
+        try:
+            async with self.session.get(f"{API_BASE}/integrations/voice-ai/info") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "capabilities" in data.get("data", {}):
+                        capabilities = data["data"]["capabilities"]
+                        self.log_test("Voice AI - Get Info", True, "Voice AI capabilities retrieved successfully")
+                        return True
+                    else:
+                        self.log_test("Voice AI - Get Info", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Voice AI - Get Info", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Voice AI - Get Info", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_vision_ai_analyze(self):
+        """Test POST /api/integrations/vision-ai/analyze - Analyze image"""
+        try:
+            # 1x1 red pixel test image in base64
+            analyze_data = {
+                "image_data": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+                "prompt": "What is in this image?",
+                "image_type": "base64"
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/integrations/vision-ai/analyze",
+                json=analyze_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "analysis" in data.get("data", {}):
+                        analysis = data["data"]["analysis"]
+                        self.log_test("Vision AI - Analyze Image", True, "Image analysis completed successfully")
+                        return True
+                    else:
+                        self.log_test("Vision AI - Analyze Image", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Vision AI - Analyze Image", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Vision AI - Analyze Image", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_vision_ai_formats(self):
+        """Test GET /api/integrations/vision-ai/formats - Get supported formats"""
+        try:
+            async with self.session.get(f"{API_BASE}/integrations/vision-ai/formats") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "formats" in data.get("data", {}):
+                        formats = data["data"]["formats"]
+                        # Should include common formats like jpeg, png, etc.
+                        if isinstance(formats, list) and len(formats) > 0:
+                            self.log_test("Vision AI - Get Formats", True, f"Supported formats retrieved: {', '.join(formats)}")
+                            return True
+                        else:
+                            self.log_test("Vision AI - Get Formats", False, "No formats returned", data)
+                            return False
+                    else:
+                        self.log_test("Vision AI - Get Formats", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Vision AI - Get Formats", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Vision AI - Get Formats", False, f"Exception: {str(e)}")
+            return False
     
     async def run_all_tests(self):
         """Run all backend tests"""
