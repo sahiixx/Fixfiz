@@ -146,7 +146,7 @@ class WhiteLabelManager:
         
         # Try loading from database
         if tenant_id:
-            db = await get_database()
+            db = get_database()
             tenant_doc = await db.tenants.find_one({"tenant_id": tenant_id})
             if tenant_doc:
                 config = TenantConfig(tenant_doc.get('config', {}))
