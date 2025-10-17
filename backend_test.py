@@ -775,11 +775,36 @@ class BackendTester:
         print("\n🤖 Testing AI Problem Analysis Endpoint:")
         print("-" * 40)
         
-        # Test new AI Problem Analysis endpoint
+        # Test AI Problem Analysis endpoint
         await self.test_ai_problem_analysis_valid_request()
         await self.test_ai_problem_analysis_minimal_data()
         await self.test_ai_problem_analysis_empty_request()
         await self.test_ai_problem_analysis_invalid_json()
+        
+        print("\n🎯 Testing AI Agent System - PRIORITY TESTING:")
+        print("-" * 50)
+        
+        # Test Agent Orchestrator Endpoints
+        print("\n📊 Agent Orchestrator:")
+        await self.test_agents_status()
+        await self.test_orchestrator_metrics()
+        await self.test_task_history()
+        
+        # Test Sales Agent Integration
+        print("\n💼 Sales Agent Integration:")
+        await self.test_sales_agent_qualify_lead()
+        await self.test_sales_pipeline_analysis()
+        await self.test_sales_generate_proposal()
+        
+        # Test Marketing & Content Agents
+        print("\n📈 Marketing & Content Agents:")
+        await self.test_marketing_create_campaign()
+        await self.test_content_agent_generate()
+        await self.test_analytics_agent_analyze()
+        
+        # Test Agent Control Functions
+        print("\n⚙️ Agent Control Functions:")
+        await self.test_agent_control_functions()
         
         # Summary
         print("\n" + "=" * 60)
