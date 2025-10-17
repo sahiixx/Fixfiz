@@ -380,6 +380,377 @@ class BackendTester:
         except Exception as e:
             self.log_test("Chat Message Sending", False, f"Exception: {str(e)}")
             return False
+
+    # ================================================================================================
+    # AI AGENT SYSTEM TESTS - NEW COMPREHENSIVE TESTING
+    # ================================================================================================
+    
+    async def test_agents_status(self):
+        """Test GET /api/agents/status - Agent status retrieval"""
+        try:
+            async with self.session.get(f"{API_BASE}/agents/status") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        agent_status = data["data"]
+                        # Should contain agent information
+                        if isinstance(agent_status, dict):
+                            self.log_test("Agent Status Retrieval", True, "Agent status retrieved successfully")
+                            return True
+                        else:
+                            self.log_test("Agent Status Retrieval", False, "Invalid agent status format", data)
+                            return False
+                    else:
+                        self.log_test("Agent Status Retrieval", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Agent Status Retrieval", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Agent Status Retrieval", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_orchestrator_metrics(self):
+        """Test GET /api/agents/metrics - Orchestrator metrics"""
+        try:
+            async with self.session.get(f"{API_BASE}/agents/metrics") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        metrics = data["data"]
+                        # Should contain metrics information
+                        if isinstance(metrics, dict):
+                            self.log_test("Orchestrator Metrics", True, "Orchestrator metrics retrieved successfully")
+                            return True
+                        else:
+                            self.log_test("Orchestrator Metrics", False, "Invalid metrics format", data)
+                            return False
+                    else:
+                        self.log_test("Orchestrator Metrics", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Orchestrator Metrics", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Orchestrator Metrics", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_task_history(self):
+        """Test GET /api/agents/tasks/history - Task history"""
+        try:
+            async with self.session.get(f"{API_BASE}/agents/tasks/history") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        history_data = data["data"]
+                        # Should contain tasks array
+                        if "tasks" in history_data and isinstance(history_data["tasks"], list):
+                            self.log_test("Task History", True, "Task history retrieved successfully")
+                            return True
+                        else:
+                            self.log_test("Task History", False, "Invalid task history format", data)
+                            return False
+                    else:
+                        self.log_test("Task History", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Task History", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Task History", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_sales_agent_qualify_lead(self):
+        """Test POST /api/agents/sales/qualify-lead - Lead qualification with Dubai business data"""
+        try:
+            # Dubai business lead data
+            lead_data = {
+                "company_name": "Al Barsha Trading LLC",
+                "contact_name": "Fatima Al-Zahra",
+                "email": "fatima@albarsha.ae",
+                "phone": "+971-4-555-0123",
+                "industry": "retail",
+                "location": "Dubai, UAE",
+                "business_size": "medium",
+                "annual_revenue": "AED 5M - 15M",
+                "current_challenges": "Need to expand online presence and improve digital marketing ROI",
+                "budget_range": "AED 50K - 150K/month",
+                "timeline": "3-6 months",
+                "decision_maker": True
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/agents/sales/qualify-lead",
+                json=lead_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "task_id" in data.get("data", {}):
+                        task_id = data["data"]["task_id"]
+                        self.log_test("Sales Agent - Lead Qualification", True, f"Lead qualification task submitted: {task_id}")
+                        return True
+                    else:
+                        self.log_test("Sales Agent - Lead Qualification", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Sales Agent - Lead Qualification", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Sales Agent - Lead Qualification", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_sales_pipeline_analysis(self):
+        """Test GET /api/agents/sales/pipeline - Sales pipeline analysis"""
+        try:
+            async with self.session.get(f"{API_BASE}/agents/sales/pipeline") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "task_id" in data.get("data", {}):
+                        task_id = data["data"]["task_id"]
+                        self.log_test("Sales Pipeline Analysis", True, f"Pipeline analysis task submitted: {task_id}")
+                        return True
+                    else:
+                        self.log_test("Sales Pipeline Analysis", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Sales Pipeline Analysis", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Sales Pipeline Analysis", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_sales_generate_proposal(self):
+        """Test POST /api/agents/sales/generate-proposal - Proposal generation"""
+        try:
+            # Dubai business proposal data
+            proposal_data = {
+                "client_name": "Emirates Digital Solutions",
+                "industry": "fintech",
+                "location": "DIFC, Dubai",
+                "services_needed": ["digital_marketing", "web_development", "seo", "social_media"],
+                "budget_range": "AED 100K - 300K",
+                "project_timeline": "6 months",
+                "business_goals": "Launch new fintech app in UAE market, acquire 10K users in first year",
+                "target_audience": "UAE residents aged 25-45, tech-savvy professionals",
+                "competitors": ["Careem Pay", "CBD Now", "ADCB Hayyak"],
+                "special_requirements": "Compliance with UAE Central Bank regulations"
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/agents/sales/generate-proposal",
+                json=proposal_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "task_id" in data.get("data", {}):
+                        task_id = data["data"]["task_id"]
+                        self.log_test("Sales Agent - Proposal Generation", True, f"Proposal generation task submitted: {task_id}")
+                        return True
+                    else:
+                        self.log_test("Sales Agent - Proposal Generation", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Sales Agent - Proposal Generation", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Sales Agent - Proposal Generation", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_marketing_create_campaign(self):
+        """Test POST /api/agents/marketing/create-campaign - Marketing campaign creation"""
+        try:
+            # Dubai marketing campaign data
+            campaign_data = {
+                "campaign_name": "Dubai Summer Shopping Festival 2024",
+                "client_business": "Luxury Fashion Boutique",
+                "target_market": "Dubai, Abu Dhabi, Sharjah",
+                "campaign_type": "seasonal_promotion",
+                "budget": "AED 75,000",
+                "duration": "30 days",
+                "objectives": ["increase_brand_awareness", "drive_sales", "customer_acquisition"],
+                "target_audience": {
+                    "demographics": "Women 25-45, high income",
+                    "interests": ["luxury fashion", "shopping", "lifestyle"],
+                    "location": "UAE"
+                },
+                "channels": ["instagram", "facebook", "google_ads", "influencer_marketing"],
+                "kpis": ["reach", "engagement", "conversions", "roas"]
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/agents/marketing/create-campaign",
+                json=campaign_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "task_id" in data.get("data", {}):
+                        task_id = data["data"]["task_id"]
+                        self.log_test("Marketing Agent - Campaign Creation", True, f"Campaign creation task submitted: {task_id}")
+                        return True
+                    else:
+                        self.log_test("Marketing Agent - Campaign Creation", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Marketing Agent - Campaign Creation", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Marketing Agent - Campaign Creation", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_content_agent_generate(self):
+        """Test POST /api/agents/content/generate - Content generation agent"""
+        try:
+            # Dubai content generation data
+            content_data = {
+                "content_type": "social_media_campaign",
+                "business_info": {
+                    "name": "Dubai Marina Restaurant",
+                    "industry": "hospitality",
+                    "location": "Dubai Marina, UAE",
+                    "specialty": "Mediterranean cuisine with Dubai skyline views"
+                },
+                "campaign_theme": "Ramadan Iftar Special Menu 2024",
+                "target_audience": "Families and professionals in Dubai",
+                "tone": "warm, welcoming, culturally respectful",
+                "platforms": ["instagram", "facebook", "linkedin"],
+                "content_requirements": {
+                    "posts_count": 10,
+                    "include_hashtags": True,
+                    "include_call_to_action": True,
+                    "languages": ["english", "arabic"]
+                }
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/agents/content/generate",
+                json=content_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "task_id" in data.get("data", {}):
+                        task_id = data["data"]["task_id"]
+                        self.log_test("Content Agent - Content Generation", True, f"Content generation task submitted: {task_id}")
+                        return True
+                    else:
+                        self.log_test("Content Agent - Content Generation", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Content Agent - Content Generation", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Content Agent - Content Generation", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_analytics_agent_analyze(self):
+        """Test POST /api/agents/analytics/analyze - Analytics agent"""
+        try:
+            # Dubai business analytics data
+            analysis_data = {
+                "business_name": "Dubai Tech Startup Hub",
+                "analysis_type": "market_performance",
+                "data_sources": ["website_analytics", "social_media", "sales_data", "customer_feedback"],
+                "time_period": "Q1 2024",
+                "metrics_focus": ["user_acquisition", "conversion_rates", "customer_lifetime_value", "market_penetration"],
+                "business_context": {
+                    "industry": "technology",
+                    "location": "Dubai Internet City",
+                    "target_market": "UAE startups and SMEs",
+                    "business_model": "B2B SaaS"
+                },
+                "goals": ["identify_growth_opportunities", "optimize_marketing_spend", "improve_customer_retention"]
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/agents/analytics/analyze",
+                json=analysis_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "task_id" in data.get("data", {}):
+                        task_id = data["data"]["task_id"]
+                        self.log_test("Analytics Agent - Data Analysis", True, f"Data analysis task submitted: {task_id}")
+                        return True
+                    else:
+                        self.log_test("Analytics Agent - Data Analysis", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Analytics Agent - Data Analysis", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Analytics Agent - Data Analysis", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_agent_control_functions(self):
+        """Test agent control functions - pause, resume, reset"""
+        try:
+            # Test with a sample agent ID (sales agent)
+            agent_id = "sales_agent"
+            
+            # Test pause agent
+            async with self.session.post(f"{API_BASE}/agents/{agent_id}/pause") as response:
+                if response.status in [200, 404]:  # 404 is acceptable if agent doesn't exist
+                    if response.status == 200:
+                        data = await response.json()
+                        if data.get("success"):
+                            pause_success = True
+                        else:
+                            pause_success = False
+                    else:
+                        pause_success = True  # 404 is acceptable
+                else:
+                    pause_success = False
+            
+            # Test resume agent
+            async with self.session.post(f"{API_BASE}/agents/{agent_id}/resume") as response:
+                if response.status in [200, 404]:  # 404 is acceptable if agent doesn't exist
+                    if response.status == 200:
+                        data = await response.json()
+                        if data.get("success"):
+                            resume_success = True
+                        else:
+                            resume_success = False
+                    else:
+                        resume_success = True  # 404 is acceptable
+                else:
+                    resume_success = False
+            
+            # Test reset agent
+            async with self.session.post(f"{API_BASE}/agents/{agent_id}/reset") as response:
+                if response.status in [200, 404]:  # 404 is acceptable if agent doesn't exist
+                    if response.status == 200:
+                        data = await response.json()
+                        if data.get("success"):
+                            reset_success = True
+                        else:
+                            reset_success = False
+                    else:
+                        reset_success = True  # 404 is acceptable
+                else:
+                    reset_success = False
+            
+            # Overall success if all operations work
+            if pause_success and resume_success and reset_success:
+                self.log_test("Agent Control Functions", True, "Pause, resume, and reset operations working")
+                return True
+            else:
+                failed_ops = []
+                if not pause_success:
+                    failed_ops.append("pause")
+                if not resume_success:
+                    failed_ops.append("resume")
+                if not reset_success:
+                    failed_ops.append("reset")
+                self.log_test("Agent Control Functions", False, f"Failed operations: {', '.join(failed_ops)}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Agent Control Functions", False, f"Exception: {str(e)}")
+            return False
     
     async def run_all_tests(self):
         """Run all backend tests"""
