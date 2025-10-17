@@ -1257,6 +1257,715 @@ class BackendTester:
         except Exception as e:
             self.log_test("Industry Templates - Create Custom", False, f"Exception: {str(e)}")
             return False
+
+    # ================================================================================================
+    # PHASE 3 & 4 TESTING - WHITE LABEL, INTER-AGENT COMMUNICATION & SMART INSIGHTS
+    # ================================================================================================
+    
+    async def test_white_label_create_tenant(self):
+        """Test POST /api/white-label/create-tenant - Create white-label tenant"""
+        try:
+            # Dubai reseller tenant data
+            tenant_data = {
+                "tenant_name": "Dubai Digital Solutions",
+                "company_info": {
+                    "name": "Dubai Digital Solutions LLC",
+                    "contact_person": "Mohammed Al-Rashid",
+                    "email": "mohammed@dubaidigital.ae",
+                    "phone": "+971-4-555-9999",
+                    "address": "Sheikh Zayed Road, Dubai, UAE",
+                    "trade_license": "CN-9876543",
+                    "vat_number": "100987654300003"
+                },
+                "branding": {
+                    "primary_color": "#1E40AF",
+                    "secondary_color": "#F59E0B",
+                    "logo_url": "https://dubaidigital.ae/logo.png",
+                    "company_name": "Dubai Digital Solutions",
+                    "tagline": "Your Digital Partner in the UAE",
+                    "languages": ["english", "arabic"],
+                    "currency": "AED",
+                    "timezone": "Asia/Dubai"
+                },
+                "features": {
+                    "white_label_dashboard": True,
+                    "custom_domain": "clients.dubaidigital.ae",
+                    "api_access": True,
+                    "reseller_portal": True,
+                    "multi_language": True
+                },
+                "subscription": {
+                    "plan": "enterprise",
+                    "max_clients": 100,
+                    "monthly_fee": "AED 5000",
+                    "commission_rate": "20%"
+                }
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/white-label/create-tenant",
+                json=tenant_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        tenant_result = data["data"]
+                        # Store tenant_id for later tests
+                        if "tenant_id" in tenant_result:
+                            self.tenant_id = tenant_result["tenant_id"]
+                        self.log_test("White Label - Create Tenant", True, "Dubai reseller tenant created successfully")
+                        return True
+                    else:
+                        self.log_test("White Label - Create Tenant", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("White Label - Create Tenant", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("White Label - Create Tenant", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_white_label_get_tenants(self):
+        """Test GET /api/white-label/tenants - Get all tenants"""
+        try:
+            async with self.session.get(f"{API_BASE}/white-label/tenants") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        tenants_data = data["data"]
+                        if "tenants" in tenants_data and isinstance(tenants_data["tenants"], list):
+                            self.log_test("White Label - Get Tenants", True, f"Retrieved {tenants_data.get('total', 0)} tenants")
+                            return True
+                        else:
+                            self.log_test("White Label - Get Tenants", False, "Invalid tenants format", data)
+                            return False
+                    else:
+                        self.log_test("White Label - Get Tenants", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("White Label - Get Tenants", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("White Label - Get Tenants", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_white_label_get_tenant_branding(self):
+        """Test GET /api/white-label/tenant/{tenant_id}/branding - Get tenant branding"""
+        try:
+            # Use tenant_id from create test or a sample ID
+            tenant_id = getattr(self, 'tenant_id', 'sample_tenant_id')
+            
+            async with self.session.get(f"{API_BASE}/white-label/tenant/{tenant_id}/branding") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        branding_data = data["data"]
+                        self.log_test("White Label - Get Tenant Branding", True, "Tenant branding retrieved successfully")
+                        return True
+                    else:
+                        self.log_test("White Label - Get Tenant Branding", False, "Invalid response structure", data)
+                        return False
+                elif response.status == 404:
+                    # Tenant not found is acceptable for this test
+                    self.log_test("White Label - Get Tenant Branding", True, "Tenant not found (expected for sample ID)")
+                    return True
+                else:
+                    self.log_test("White Label - Get Tenant Branding", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("White Label - Get Tenant Branding", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_white_label_create_reseller(self):
+        """Test POST /api/white-label/create-reseller - Create reseller package"""
+        try:
+            # Dubai reseller package data
+            reseller_data = {
+                "reseller_name": "Emirates Business Hub",
+                "package_info": {
+                    "name": "UAE Digital Transformation Package",
+                    "description": "Complete digital transformation solution for UAE businesses",
+                    "target_market": "UAE SMEs and Startups",
+                    "pricing_model": "tiered"
+                },
+                "branding": {
+                    "primary_color": "#00A651",
+                    "secondary_color": "#FF0000",
+                    "logo_url": "https://emiratesbusinesshub.ae/logo.png",
+                    "company_name": "Emirates Business Hub",
+                    "tagline": "Empowering UAE Businesses Digitally",
+                    "languages": ["english", "arabic"],
+                    "currency": "AED"
+                },
+                "services_included": [
+                    "ai_agents",
+                    "digital_marketing",
+                    "web_development",
+                    "e_commerce_solutions",
+                    "business_automation",
+                    "analytics_insights"
+                ],
+                "pricing_tiers": [
+                    {
+                        "name": "Startup",
+                        "price": "AED 2,500/month",
+                        "features": ["Basic AI Agent", "Website", "Social Media Management"],
+                        "max_users": 5
+                    },
+                    {
+                        "name": "Growth",
+                        "price": "AED 7,500/month", 
+                        "features": ["Full AI Suite", "E-commerce", "Advanced Analytics"],
+                        "max_users": 25
+                    },
+                    {
+                        "name": "Enterprise",
+                        "price": "AED 15,000/month",
+                        "features": ["Custom Solutions", "White Label", "Dedicated Support"],
+                        "max_users": 100
+                    }
+                ],
+                "commission_structure": {
+                    "base_commission": "25%",
+                    "performance_bonus": "5%",
+                    "volume_discount": "10% for 50+ clients"
+                }
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/white-label/create-reseller",
+                json=reseller_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        reseller_result = data["data"]
+                        self.log_test("White Label - Create Reseller", True, "UAE reseller package created successfully")
+                        return True
+                    else:
+                        self.log_test("White Label - Create Reseller", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("White Label - Create Reseller", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("White Label - Create Reseller", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_agents_collaborate(self):
+        """Test POST /api/agents/collaborate - Initiate agent collaboration"""
+        try:
+            # Multi-agent collaboration for Dubai client onboarding
+            collaboration_request = {
+                "collaboration_name": "Complete Dubai Client Onboarding",
+                "client_info": {
+                    "company": "Al Barsha Tech Solutions LLC",
+                    "industry": "technology",
+                    "location": "Dubai Internet City, UAE",
+                    "contact": "Amira Hassan",
+                    "email": "amira@albarsha-tech.ae"
+                },
+                "agents_involved": ["sales", "marketing", "content", "operations"],
+                "collaboration_type": "sequential_workflow",
+                "tasks": [
+                    {
+                        "agent": "sales",
+                        "task": "qualify_lead_and_create_proposal",
+                        "priority": 1,
+                        "data": {
+                            "lead_info": "Tech startup needing full digital presence",
+                            "budget": "AED 200K",
+                            "timeline": "3 months"
+                        }
+                    },
+                    {
+                        "agent": "marketing",
+                        "task": "create_launch_campaign",
+                        "priority": 2,
+                        "depends_on": "sales",
+                        "data": {
+                            "campaign_type": "product_launch",
+                            "target_market": "UAE tech professionals"
+                        }
+                    },
+                    {
+                        "agent": "content",
+                        "task": "generate_marketing_content",
+                        "priority": 2,
+                        "depends_on": "marketing",
+                        "data": {
+                            "content_types": ["website_copy", "social_media", "press_release"],
+                            "languages": ["english", "arabic"]
+                        }
+                    },
+                    {
+                        "agent": "operations",
+                        "task": "setup_client_systems",
+                        "priority": 3,
+                        "depends_on": ["sales", "marketing"],
+                        "data": {
+                            "systems": ["crm", "project_management", "billing"],
+                            "integrations": ["email", "calendar", "analytics"]
+                        }
+                    }
+                ],
+                "expected_duration": "5 days",
+                "success_criteria": [
+                    "client_proposal_approved",
+                    "marketing_campaign_launched",
+                    "content_published",
+                    "systems_operational"
+                ]
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/agents/collaborate",
+                json=collaboration_request,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        collaboration_data = data["data"]
+                        if "collaboration_id" in collaboration_data:
+                            self.collaboration_id = collaboration_data["collaboration_id"]
+                        self.log_test("Inter-Agent Communication - Initiate Collaboration", True, "Multi-agent collaboration initiated successfully")
+                        return True
+                    else:
+                        self.log_test("Inter-Agent Communication - Initiate Collaboration", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Inter-Agent Communication - Initiate Collaboration", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Inter-Agent Communication - Initiate Collaboration", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_agents_collaboration_status(self):
+        """Test GET /api/agents/collaborate/{collaboration_id} - Get collaboration status"""
+        try:
+            # Use collaboration_id from previous test or sample ID
+            collaboration_id = getattr(self, 'collaboration_id', 'sample_collaboration_id')
+            
+            async with self.session.get(f"{API_BASE}/agents/collaborate/{collaboration_id}") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        status_data = data["data"]
+                        self.log_test("Inter-Agent Communication - Get Collaboration Status", True, "Collaboration status retrieved successfully")
+                        return True
+                    else:
+                        self.log_test("Inter-Agent Communication - Get Collaboration Status", False, "Invalid response structure", data)
+                        return False
+                elif response.status == 404:
+                    # Collaboration not found is acceptable for sample ID
+                    self.log_test("Inter-Agent Communication - Get Collaboration Status", True, "Collaboration not found (expected for sample ID)")
+                    return True
+                else:
+                    self.log_test("Inter-Agent Communication - Get Collaboration Status", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Inter-Agent Communication - Get Collaboration Status", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_agents_delegate_task(self):
+        """Test POST /api/agents/delegate-task - Delegate task between agents"""
+        try:
+            # Task delegation from sales to marketing agent
+            delegation_request = {
+                "from_agent_id": "sales_agent",
+                "to_agent_id": "marketing_agent",
+                "delegation_reason": "Lead qualified, needs marketing campaign",
+                "task_data": {
+                    "task_type": "create_targeted_campaign",
+                    "client_info": {
+                        "company": "Dubai Fashion Boutique",
+                        "industry": "retail_fashion",
+                        "location": "Dubai Mall, UAE",
+                        "budget": "AED 50,000",
+                        "target_audience": "UAE women 25-45, luxury fashion"
+                    },
+                    "campaign_requirements": {
+                        "channels": ["instagram", "facebook", "google_ads"],
+                        "duration": "30 days",
+                        "objectives": ["brand_awareness", "sales_conversion"],
+                        "languages": ["english", "arabic"]
+                    },
+                    "deadline": "2024-02-20",
+                    "priority": "high"
+                },
+                "expected_deliverables": [
+                    "campaign_strategy",
+                    "creative_assets_plan",
+                    "budget_allocation",
+                    "timeline_schedule"
+                ],
+                "success_metrics": [
+                    "campaign_approval",
+                    "assets_created",
+                    "campaign_launched"
+                ]
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/agents/delegate-task",
+                json=delegation_request,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        delegation_data = data["data"]
+                        if "delegation_id" in delegation_data:
+                            self.delegation_id = delegation_data["delegation_id"]
+                        self.log_test("Inter-Agent Communication - Delegate Task", True, "Task delegated successfully between agents")
+                        return True
+                    else:
+                        self.log_test("Inter-Agent Communication - Delegate Task", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Inter-Agent Communication - Delegate Task", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Inter-Agent Communication - Delegate Task", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_agents_communication_metrics(self):
+        """Test GET /api/agents/communication/metrics - Get communication metrics"""
+        try:
+            async with self.session.get(f"{API_BASE}/agents/communication/metrics") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        metrics_data = data["data"]
+                        self.log_test("Inter-Agent Communication - Get Metrics", True, "Communication metrics retrieved successfully")
+                        return True
+                    else:
+                        self.log_test("Inter-Agent Communication - Get Metrics", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Inter-Agent Communication - Get Metrics", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Inter-Agent Communication - Get Metrics", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_insights_analyze_performance(self):
+        """Test POST /api/insights/analyze-performance - Analyze system performance"""
+        try:
+            # Dubai business performance data
+            performance_data = {
+                "business_context": {
+                    "company": "Dubai E-commerce Hub",
+                    "industry": "e_commerce",
+                    "location": "Dubai, UAE",
+                    "business_size": "medium",
+                    "target_market": "UAE, GCC"
+                },
+                "performance_metrics": {
+                    "website_traffic": {
+                        "monthly_visitors": 125000,
+                        "bounce_rate": "35%",
+                        "avg_session_duration": "4.2 minutes",
+                        "conversion_rate": "2.8%"
+                    },
+                    "sales_data": {
+                        "monthly_revenue": "AED 450,000",
+                        "order_value": "AED 285",
+                        "customer_acquisition_cost": "AED 45",
+                        "customer_lifetime_value": "AED 850"
+                    },
+                    "marketing_performance": {
+                        "social_media_engagement": "6.5%",
+                        "email_open_rate": "28%",
+                        "ad_spend_roi": "4.2x",
+                        "organic_traffic_growth": "15%"
+                    },
+                    "operational_metrics": {
+                        "order_fulfillment_time": "24 hours",
+                        "customer_satisfaction": "4.6/5",
+                        "return_rate": "8%",
+                        "support_response_time": "2 hours"
+                    }
+                },
+                "time_period": "Q1 2024",
+                "comparison_period": "Q4 2023",
+                "analysis_goals": [
+                    "identify_growth_opportunities",
+                    "optimize_conversion_rates",
+                    "reduce_customer_acquisition_cost",
+                    "improve_operational_efficiency"
+                ]
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/insights/analyze-performance",
+                json=performance_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        insights_data = data["data"]
+                        if "insights" in insights_data and isinstance(insights_data["insights"], list):
+                            insights_count = insights_data.get("insights_generated", 0)
+                            self.log_test("Smart Insights - Analyze Performance", True, f"Generated {insights_count} performance insights")
+                            return True
+                        else:
+                            self.log_test("Smart Insights - Analyze Performance", False, "Invalid insights format", data)
+                            return False
+                    else:
+                        self.log_test("Smart Insights - Analyze Performance", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Smart Insights - Analyze Performance", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Smart Insights - Analyze Performance", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_insights_analyze_agent(self):
+        """Test POST /api/insights/analyze-agent/{agent_id} - Analyze agent performance"""
+        try:
+            agent_id = "sales_agent"
+            
+            # Agent performance metrics
+            agent_metrics = {
+                "agent_info": {
+                    "agent_id": agent_id,
+                    "agent_type": "sales",
+                    "deployment_date": "2024-01-01",
+                    "version": "2.1.0"
+                },
+                "performance_data": {
+                    "tasks_completed": 156,
+                    "success_rate": "92%",
+                    "average_response_time": "1.2 seconds",
+                    "error_rate": "3%",
+                    "uptime": "99.8%"
+                },
+                "business_impact": {
+                    "leads_qualified": 89,
+                    "proposals_generated": 34,
+                    "conversion_rate": "38%",
+                    "revenue_generated": "AED 1,250,000",
+                    "client_satisfaction": "4.7/5"
+                },
+                "resource_usage": {
+                    "cpu_utilization": "45%",
+                    "memory_usage": "2.1 GB",
+                    "api_calls_per_day": 1250,
+                    "processing_time_avg": "850ms"
+                },
+                "interaction_patterns": {
+                    "peak_usage_hours": ["9-11 AM", "2-4 PM"],
+                    "most_common_tasks": ["lead_qualification", "proposal_generation"],
+                    "collaboration_frequency": "15 times/week",
+                    "user_feedback_score": "4.5/5"
+                },
+                "analysis_period": "30 days"
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/insights/analyze-agent/{agent_id}",
+                json=agent_metrics,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        insights_data = data["data"]
+                        if "insights" in insights_data and isinstance(insights_data["insights"], list):
+                            insights_count = insights_data.get("insights_generated", 0)
+                            self.log_test("Smart Insights - Analyze Agent Performance", True, f"Generated {insights_count} agent improvement insights")
+                            return True
+                        else:
+                            self.log_test("Smart Insights - Analyze Agent Performance", False, "Invalid insights format", data)
+                            return False
+                    else:
+                        self.log_test("Smart Insights - Analyze Agent Performance", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Smart Insights - Analyze Agent Performance", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Smart Insights - Analyze Agent Performance", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_insights_detect_anomalies(self):
+        """Test POST /api/insights/detect-anomalies - Detect business anomalies"""
+        try:
+            # Dubai business anomaly detection data
+            business_data = {
+                "business_context": {
+                    "company": "Dubai Restaurant Chain",
+                    "industry": "hospitality",
+                    "locations": ["Dubai Marina", "JBR", "Downtown Dubai"],
+                    "business_model": "multi_location_restaurant"
+                },
+                "metrics_data": {
+                    "daily_sales": [
+                        {"date": "2024-02-01", "amount": "AED 15,500", "location": "Dubai Marina"},
+                        {"date": "2024-02-02", "amount": "AED 18,200", "location": "Dubai Marina"},
+                        {"date": "2024-02-03", "amount": "AED 8,900", "location": "Dubai Marina"},  # Anomaly
+                        {"date": "2024-02-04", "amount": "AED 16,800", "location": "Dubai Marina"},
+                        {"date": "2024-02-05", "amount": "AED 19,100", "location": "Dubai Marina"}
+                    ],
+                    "customer_traffic": [
+                        {"date": "2024-02-01", "count": 245, "location": "JBR"},
+                        {"date": "2024-02-02", "count": 289, "location": "JBR"},
+                        {"date": "2024-02-03", "count": 95, "location": "JBR"},  # Anomaly
+                        {"date": "2024-02-04", "count": 267, "location": "JBR"},
+                        {"date": "2024-02-05", "count": 301, "location": "JBR"}
+                    ],
+                    "operational_costs": [
+                        {"date": "2024-02-01", "amount": "AED 4,200"},
+                        {"date": "2024-02-02", "amount": "AED 4,350"},
+                        {"date": "2024-02-03", "amount": "AED 7,800"},  # Anomaly
+                        {"date": "2024-02-04", "amount": "AED 4,180"},
+                        {"date": "2024-02-05", "amount": "AED 4,290"}
+                    ]
+                },
+                "detection_parameters": {
+                    "sensitivity": "medium",
+                    "time_window": "7 days",
+                    "threshold_deviation": "2.5 standard deviations",
+                    "categories": ["sales", "traffic", "costs", "inventory"]
+                },
+                "business_context_factors": {
+                    "seasonal_events": ["Dubai Shopping Festival"],
+                    "weather_impact": True,
+                    "local_events": ["Dubai Marathon weekend"],
+                    "competitor_activities": ["New restaurant opening nearby"]
+                }
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/insights/detect-anomalies",
+                json=business_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        anomalies_data = data["data"]
+                        if "insights" in anomalies_data and isinstance(anomalies_data["insights"], list):
+                            anomalies_count = anomalies_data.get("anomalies_detected", 0)
+                            self.log_test("Smart Insights - Detect Anomalies", True, f"Detected {anomalies_count} business anomalies")
+                            return True
+                        else:
+                            self.log_test("Smart Insights - Detect Anomalies", False, "Invalid anomalies format", data)
+                            return False
+                    else:
+                        self.log_test("Smart Insights - Detect Anomalies", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Smart Insights - Detect Anomalies", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Smart Insights - Detect Anomalies", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_insights_optimization_recommendations(self):
+        """Test POST /api/insights/optimization-recommendations - Generate optimization recommendations"""
+        try:
+            # Dubai business optimization context
+            context_data = {
+                "business_profile": {
+                    "company": "Dubai Tech Startup Incubator",
+                    "industry": "technology_services",
+                    "location": "Dubai Internet City, UAE",
+                    "business_stage": "growth",
+                    "target_market": "UAE startups and SMEs"
+                },
+                "current_challenges": [
+                    "High customer acquisition cost",
+                    "Low conversion rate on website",
+                    "Inefficient lead nurturing process",
+                    "Limited brand awareness in UAE market"
+                ],
+                "business_goals": [
+                    "Reduce CAC by 30%",
+                    "Increase conversion rate to 5%",
+                    "Expand to 500 clients by end of year",
+                    "Establish thought leadership in UAE tech scene"
+                ],
+                "current_metrics": {
+                    "monthly_revenue": "AED 180,000",
+                    "customer_acquisition_cost": "AED 850",
+                    "conversion_rate": "2.1%",
+                    "customer_lifetime_value": "AED 12,000",
+                    "monthly_website_visitors": 8500,
+                    "social_media_followers": 2400
+                },
+                "resources_available": {
+                    "marketing_budget": "AED 45,000/month",
+                    "team_size": 12,
+                    "technology_stack": ["CRM", "Email Marketing", "Analytics"],
+                    "content_creation_capacity": "8 pieces/week"
+                },
+                "market_context": {
+                    "competition_level": "high",
+                    "market_growth_rate": "25% annually",
+                    "seasonal_factors": ["Ramadan", "Dubai Expo legacy"],
+                    "regulatory_environment": "UAE business-friendly"
+                },
+                "optimization_focus": [
+                    "digital_marketing_efficiency",
+                    "sales_process_automation",
+                    "customer_experience_improvement",
+                    "operational_cost_reduction"
+                ]
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/insights/optimization-recommendations",
+                json=context_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        recommendations_data = data["data"]
+                        if "insights" in recommendations_data and isinstance(recommendations_data["insights"], list):
+                            recommendations_count = recommendations_data.get("recommendations_generated", 0)
+                            self.log_test("Smart Insights - Optimization Recommendations", True, f"Generated {recommendations_count} optimization recommendations")
+                            return True
+                        else:
+                            self.log_test("Smart Insights - Optimization Recommendations", False, "Invalid recommendations format", data)
+                            return False
+                    else:
+                        self.log_test("Smart Insights - Optimization Recommendations", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Smart Insights - Optimization Recommendations", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Smart Insights - Optimization Recommendations", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_insights_summary(self):
+        """Test GET /api/insights/summary - Get insights summary"""
+        try:
+            # Test with 7 days summary
+            async with self.session.get(f"{API_BASE}/insights/summary?days=7") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "data" in data:
+                        summary_data = data["data"]
+                        self.log_test("Smart Insights - Get Summary", True, "Insights summary retrieved successfully")
+                        return True
+                    else:
+                        self.log_test("Smart Insights - Get Summary", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Smart Insights - Get Summary", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Smart Insights - Get Summary", False, f"Exception: {str(e)}")
+            return False
     
     async def run_all_tests(self):
         """Run all backend tests"""
