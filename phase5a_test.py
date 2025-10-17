@@ -65,8 +65,10 @@ class Phase5ATester:
     async def test_security_create_user(self):
         """Test POST /api/security/users/create - Create user with RBAC"""
         try:
+            # Use unique email to avoid duplicate key errors
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S_%f')
             user_data = {
-                "email": "admin@dubaitech.ae",
+                "email": f"admin_{timestamp}@dubaitech.ae",
                 "password": "SecurePass123!@#",
                 "name": "Ahmed Administrator",
                 "role": "tenant_admin",
