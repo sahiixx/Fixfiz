@@ -1520,6 +1520,10 @@ async def startup_event():
     await inter_agent_comm.start()
     logger.info("Inter-agent communication system started")
     
+    # Initialize Phase 5 systems (Enterprise Security & Performance)
+    await performance_optimizer.initialize()
+    logger.info("Performance optimization system initialized")
+    
     logger.info("NOWHERE Digital API started successfully")
 
 @app.on_event("shutdown")
