@@ -4,7 +4,6 @@ import {
   Download, 
   Star, 
   Search, 
-  Filter, 
   Grid3X3, 
   List,
   Zap,
@@ -12,7 +11,6 @@ import {
   Users,
   Trending,
   Plus,
-  Code,
   Settings
 } from 'lucide-react';
 import MobileMatrixOptimizer from '../components/MobileMatrixOptimizer';
