@@ -2046,9 +2046,34 @@ class BackendTester:
         await self.test_templates_validate()
         await self.test_templates_custom()
         
+        print("\n🌟 PHASE 3 & 4 TESTING - ENTERPRISE FEATURES:")
+        print("=" * 60)
+        
+        # Test White Label & Multi-Tenancy System (NEW)
+        print("\n🏢 White Label & Multi-Tenancy System:")
+        await self.test_white_label_create_tenant()
+        await self.test_white_label_get_tenants()
+        await self.test_white_label_get_tenant_branding()
+        await self.test_white_label_create_reseller()
+        
+        # Test Inter-Agent Communication System (NEW)
+        print("\n🤝 Inter-Agent Communication System:")
+        await self.test_agents_collaborate()
+        await self.test_agents_collaboration_status()
+        await self.test_agents_delegate_task()
+        await self.test_agents_communication_metrics()
+        
+        # Test Smart Insights & Analytics Engine (NEW)
+        print("\n🧠 Smart Insights & Analytics Engine:")
+        await self.test_insights_analyze_performance()
+        await self.test_insights_analyze_agent()
+        await self.test_insights_detect_anomalies()
+        await self.test_insights_optimization_recommendations()
+        await self.test_insights_summary()
+        
         # Summary
         print("\n" + "=" * 60)
-        print("📊 COMPREHENSIVE PHASE 2 TEST SUMMARY")
+        print("📊 COMPREHENSIVE PHASE 3 & 4 TEST SUMMARY")
         print("=" * 60)
         
         total_tests = len(self.test_results)
