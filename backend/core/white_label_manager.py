@@ -180,7 +180,7 @@ class WhiteLabelManager:
             self.tenants[tenant_id] = updated_tenant
             
             # Update database
-            db = await get_database()
+            db = get_database()
             await db.tenants.update_one(
                 {"tenant_id": tenant_id},
                 {"$set": {"config": current_config, "updated_at": current_config["updated_at"]}}
