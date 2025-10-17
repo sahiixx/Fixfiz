@@ -241,7 +241,7 @@ class SecurityManager:
                 "user_id": user_id,
                 "email": user_record["email"],
                 "role": user_record["role"],
-                "permissions": [p.value for p in user_record["permissions"]]
+                "permissions": user_record["permissions"]
             }
             
         except Exception as e:
