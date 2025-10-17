@@ -8,6 +8,7 @@ import AISolverPage from "./pages/AISolverPage";
 import AboutPage from "./pages/AboutPage";
 import ContactPage from "./pages/ContactPage";
 import AdminDashboard from "./components/AdminDashboard";
+import AgentDashboard from "./pages/AgentDashboard";
 import Navigation from "./components/Navigation";
 import MatrixChatSystem from "./components/MatrixChatSystem";
 
