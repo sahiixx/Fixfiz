@@ -972,7 +972,8 @@ async def startup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    """Close database connection on shutdown"""
+    """Close database connection and shutdown agent orchestrator"""
+    await orchestrator.shutdown()
     await close_db_connection()
     logger.info("NOWHERE Digital API shutdown")
 
