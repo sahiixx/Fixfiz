@@ -221,7 +221,7 @@ class SalesAgent(BaseAgent):
         """
         
         try:
-            personalized_response = await self.ai_service.generate_content(personalization_prompt)
+            personalized_response = await self.ai_service.generate_content("email_campaign", personalization_prompt)
             return personalized_response
         except:
             return base_template
