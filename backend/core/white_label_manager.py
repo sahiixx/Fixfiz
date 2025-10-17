@@ -248,7 +248,7 @@ class WhiteLabelManager:
     async def get_all_tenants(self, status: str = None) -> List[Dict[str, Any]]:
         """Get list of all tenants"""
         try:
-            db = await get_database()
+            db = get_database()
             query = {}
             if status:
                 query["config.status"] = status
