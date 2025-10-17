@@ -1502,6 +1502,306 @@ async def get_insights_summary(days: int = Query(7, ge=1, le=90)):
         logger.error(f"Error getting insights summary: {e}")
         raise HTTPException(status_code=500, detail="Failed to get insights summary")
 
+# ==========================================
+# PHASE 5: ENTERPRISE SECURITY & PERFORMANCE
+# ==========================================
+
+# Security Management Endpoints
+@api_router.post("/security/users/create", response_model=StandardResponse)
+async def create_user(user_data: Dict[str, Any]):
+    """Create a new user with role-based access control"""
+    try:
+        result = await security_manager.create_user(user_data)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="User created successfully",
+            data=result
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating user: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create user")
+
+@api_router.post("/security/auth/login", response_model=StandardResponse)
+async def login_user(request: Request, credentials: Dict[str, str]):
+    """Authenticate user and generate JWT token"""
+    try:
+        email = credentials.get("email", "")
+        password = credentials.get("password", "")
+        ip_address = request.client.host
+        user_agent = request.headers.get("user-agent", "unknown")
+        
+        result = await security_manager.authenticate_user(email, password, ip_address, user_agent)
+        
+        if "error" in result:
+            raise HTTPException(status_code=401, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="Authentication successful",
+            data=result
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error during authentication: {e}")
+        raise HTTPException(status_code=500, detail="Authentication failed")
+
+@api_router.post("/security/permissions/validate", response_model=StandardResponse)
+async def validate_permission(validation_data: Dict[str, Any]):
+    """Validate user permission for specific action"""
+    try:
+        user_id = validation_data.get("user_id", "")
+        permission_str = validation_data.get("permission", "")
+        resource = validation_data.get("resource")
+        
+        # Convert string to Permission enum
+        permission = Permission[permission_str.upper()]
+        
+        has_permission = await security_manager.validate_permission(user_id, permission, resource)
+        
+        return StandardResponse(
+            success=True,
+            message="Permission validation completed",
+            data={
+                "user_id": user_id,
+                "permission": permission_str,
+                "granted": has_permission
+            }
+        )
+    except KeyError:
+        raise HTTPException(status_code=400, detail="Invalid permission type")
+    except Exception as e:
+        logger.error(f"Error validating permission: {e}")
+        raise HTTPException(status_code=500, detail="Permission validation failed")
+
+@api_router.post("/security/policies/create", response_model=StandardResponse)
+async def create_security_policy(policy_data: Dict[str, Any]):
+    """Create a new security policy"""
+    try:
+        result = await security_manager.create_security_policy(policy_data)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="Security policy created successfully",
+            data=result
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating security policy: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create security policy")
+
+@api_router.get("/security/compliance/report/{standard}", response_model=StandardResponse)
+async def get_compliance_report(standard: str, tenant_id: Optional[str] = None):
+    """Generate compliance report for specific standard"""
+    try:
+        # Convert string to ComplianceStandard enum
+        compliance_standard = ComplianceStandard[standard.upper()]
+        
+        report = await security_manager.generate_compliance_report(compliance_standard, tenant_id)
+        
+        if "error" in report:
+            raise HTTPException(status_code=400, detail=report["error"])
+        
+        return StandardResponse(
+            success=True,
+            message=f"Compliance report generated for {standard}",
+            data=report
+        )
+    except KeyError:
+        raise HTTPException(status_code=400, detail="Invalid compliance standard")
+    except Exception as e:
+        logger.error(f"Error generating compliance report: {e}")
+        raise HTTPException(status_code=500, detail="Failed to generate compliance report")
+
+# Performance Optimization Endpoints
+@api_router.get("/performance/summary", response_model=StandardResponse)
+async def get_performance_summary(hours: int = Query(24, ge=1, le=168)):
+    """Get performance summary for the specified time period"""
+    try:
+        summary = await performance_optimizer.get_performance_summary(hours)
+        
+        if "error" in summary:
+            raise HTTPException(status_code=500, detail=summary["error"])
+        
+        return StandardResponse(
+            success=True,
+            message=f"Performance summary retrieved for {hours} hours",
+            data=summary
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting performance summary: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get performance summary")
+
+@api_router.post("/performance/optimize", response_model=StandardResponse)
+async def optimize_performance(optimization_request: Dict[str, Any]):
+    """Apply performance optimizations"""
+    try:
+        target_area = optimization_request.get("target_area", "all")
+        result = await performance_optimizer.optimize_performance(target_area)
+        
+        if "error" in result:
+            raise HTTPException(status_code=500, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="Performance optimizations applied",
+            data=result
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error optimizing performance: {e}")
+        raise HTTPException(status_code=500, detail="Failed to optimize performance")
+
+@api_router.get("/performance/auto-scale/recommendations", response_model=StandardResponse)
+async def get_auto_scale_recommendations():
+    """Get auto-scaling recommendations based on current metrics"""
+    try:
+        recommendations = await performance_optimizer.auto_scale_recommendation()
+        
+        if "error" in recommendations:
+            raise HTTPException(status_code=500, detail=recommendations["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="Auto-scaling recommendations generated",
+            data=recommendations
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting auto-scale recommendations: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get recommendations")
+
+@api_router.get("/performance/cache/stats", response_model=StandardResponse)
+async def get_cache_stats():
+    """Get cache performance statistics"""
+    try:
+        stats = performance_optimizer.cache_manager.get_stats()
+        
+        return StandardResponse(
+            success=True,
+            message="Cache statistics retrieved",
+            data=stats
+        )
+    except Exception as e:
+        logger.error(f"Error getting cache stats: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get cache statistics")
+
+# CRM Integration Endpoints
+@api_router.post("/integrations/crm/setup", response_model=StandardResponse)
+async def setup_crm_integration(setup_data: Dict[str, Any]):
+    """Setup CRM integration for a tenant"""
+    try:
+        provider_str = setup_data.get("provider", "")
+        credentials = setup_data.get("credentials", {})
+        tenant_id = setup_data.get("tenant_id")
+        
+        # Convert string to CRMProvider enum
+        provider = CRMProvider[provider_str.upper()]
+        
+        result = await crm_manager.setup_integration(provider, credentials, tenant_id)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message=f"CRM integration setup successfully for {provider_str}",
+            data=result
+        )
+    except KeyError:
+        raise HTTPException(status_code=400, detail="Invalid CRM provider")
+    except Exception as e:
+        logger.error(f"Error setting up CRM integration: {e}")
+        raise HTTPException(status_code=500, detail="Failed to setup CRM integration")
+
+@api_router.post("/integrations/crm/{integration_id}/sync-contacts", response_model=StandardResponse)
+async def sync_crm_contacts(integration_id: str, sync_request: Dict[str, Any]):
+    """Sync contacts between NOWHERE platform and CRM"""
+    try:
+        direction = sync_request.get("direction", "bidirectional")
+        
+        result = await crm_manager.sync_contacts(integration_id, direction)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="Contact synchronization completed",
+            data=result
+        )
+    except Exception as e:
+        logger.error(f"Error syncing CRM contacts: {e}")
+        raise HTTPException(status_code=500, detail="Failed to sync contacts")
+
+@api_router.post("/integrations/crm/{integration_id}/create-lead", response_model=StandardResponse)
+async def create_crm_lead(integration_id: str, lead_data: Dict[str, Any]):
+    """Create a lead in the connected CRM system"""
+    try:
+        result = await crm_manager.create_lead_in_crm(integration_id, lead_data)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="Lead created in CRM successfully",
+            data=result
+        )
+    except Exception as e:
+        logger.error(f"Error creating CRM lead: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create CRM lead")
+
+@api_router.get("/integrations/crm/{integration_id}/analytics", response_model=StandardResponse)
+async def get_crm_analytics(integration_id: str):
+    """Get analytics data from CRM"""
+    try:
+        result = await crm_manager.get_crm_analytics(integration_id)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="CRM analytics retrieved successfully",
+            data=result
+        )
+    except Exception as e:
+        logger.error(f"Error getting CRM analytics: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get CRM analytics")
+
+@api_router.post("/integrations/crm/webhook/{integration_id}", response_model=StandardResponse)
+async def handle_crm_webhook(integration_id: str, webhook_data: Dict[str, Any]):
+    """Handle incoming CRM webhook"""
+    try:
+        result = await crm_manager.handle_crm_webhook(integration_id, webhook_data)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="Webhook processed successfully",
+            data=result
+        )
+    except Exception as e:
+        logger.error(f"Error handling CRM webhook: {e}")
+        raise HTTPException(status_code=500, detail="Failed to process webhook")
+
 # Include the API router
 app.include_router(api_router)
 
