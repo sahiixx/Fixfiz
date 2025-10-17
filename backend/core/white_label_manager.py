@@ -112,7 +112,7 @@ class WhiteLabelManager:
             self.domain_mappings[domain] = tenant_config.tenant_id
             
             # Save to database
-            db = await get_database()
+            db = get_database()
             await db.tenants.insert_one({
                 "tenant_id": tenant_config.tenant_id,
                 "config": tenant_data,
