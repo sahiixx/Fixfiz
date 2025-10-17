@@ -27,6 +27,8 @@ const Navigation = () => {
     { name: 'SERVICES', path: '/services' },
     { name: 'AI_SOLVER', path: '/ai-solver' },
     { name: 'AGENTS', path: '/agents' },
+    { name: 'PLUGINS', path: '/plugins' },
+    { name: 'TEMPLATES', path: '/templates' },
     { name: 'ABOUT', path: '/about' },
     { name: 'CONTACT', path: '/contact' }
   ];
