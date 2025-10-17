@@ -29,6 +29,7 @@ const Navigation = () => {
     { name: 'AGENTS', path: '/agents' },
     { name: 'PLUGINS', path: '/plugins' },
     { name: 'TEMPLATES', path: '/templates' },
+    { name: 'INSIGHTS', path: '/insights' },
     { name: 'ABOUT', path: '/about' },
     { name: 'CONTACT', path: '/contact' }
   ];
