@@ -361,7 +361,7 @@ class SalesAgent(BaseAgent):
         Make it professional, specific, and compelling.
         """
         
-        proposal_content = await self.ai_service.generate_content(proposal_prompt)
+        proposal_content = await self.ai_service.generate_content("web_copy", proposal_prompt)
         
         return {
             "proposal_content": proposal_content,
