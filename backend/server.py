@@ -1809,6 +1809,276 @@ async def handle_crm_webhook(integration_id: str, webhook_data: Dict[str, Any]):
         logger.error(f"Error handling CRM webhook: {e}")
         raise HTTPException(status_code=500, detail="Failed to process webhook")
 
+# ==========================================
+# PHASE 5B-D: PAYMENT, COMMUNICATION & AI INTEGRATIONS
+# ==========================================
+
+# Stripe Payment Endpoints
+@api_router.get("/integrations/payments/packages", response_model=StandardResponse)
+async def get_payment_packages():
+    """Get available payment packages"""
+    try:
+        packages = stripe_integration.PACKAGES
+        return StandardResponse(
+            success=True,
+            message="Payment packages retrieved",
+            data={"packages": packages}
+        )
+    except Exception as e:
+        logger.error(f"Error getting payment packages: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get payment packages")
+
+@api_router.post("/integrations/payments/create-session", response_model=StandardResponse)
+async def create_payment_session(request: Request, payment_data: Dict[str, Any]):
+    """Create Stripe checkout session"""
+    try:
+        package_id = payment_data.get("package_id")
+        host_url = payment_data.get("host_url") or str(request.base_url).rstrip("/")
+        metadata = payment_data.get("metadata", {})
+        
+        result = await stripe_integration.create_session(package_id, host_url, metadata)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="Checkout session created",
+            data=result
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating payment session: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create payment session")
+
+@api_router.get("/integrations/payments/status/{session_id}", response_model=StandardResponse)
+async def get_payment_status(session_id: str):
+    """Get payment session status"""
+    try:
+        result = await stripe_integration.get_status(session_id)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="Payment status retrieved",
+            data=result
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting payment status: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get payment status")
+
+# Twilio SMS Endpoints
+@api_router.post("/integrations/sms/send-otp", response_model=StandardResponse)
+async def send_sms_otp(otp_request: Dict[str, Any]):
+    """Send OTP via SMS"""
+    try:
+        phone_number = otp_request.get("phone_number")
+        if not phone_number:
+            raise HTTPException(status_code=400, detail="Phone number is required")
+        
+        result = await twilio_integration.send_otp(phone_number)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="OTP sent successfully",
+            data=result
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error sending OTP: {e}")
+        raise HTTPException(status_code=500, detail="Failed to send OTP")
+
+@api_router.post("/integrations/sms/verify-otp", response_model=StandardResponse)
+async def verify_sms_otp(verification_data: Dict[str, Any]):
+    """Verify OTP"""
+    try:
+        phone_number = verification_data.get("phone_number")
+        code = verification_data.get("code")
+        
+        if not phone_number or not code:
+            raise HTTPException(status_code=400, detail="Phone number and code are required")
+        
+        result = await twilio_integration.verify_otp(phone_number, code)
+        
+        return StandardResponse(
+            success=True,
+            message="OTP verification completed",
+            data=result
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error verifying OTP: {e}")
+        raise HTTPException(status_code=500, detail="Failed to verify OTP")
+
+@api_router.post("/integrations/sms/send", response_model=StandardResponse)
+async def send_sms(sms_data: Dict[str, Any]):
+    """Send SMS message"""
+    try:
+        to_number = sms_data.get("to_number")
+        message = sms_data.get("message")
+        
+        if not to_number or not message:
+            raise HTTPException(status_code=400, detail="Phone number and message are required")
+        
+        result = await twilio_integration.send_sms(to_number, message)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="SMS sent successfully",
+            data=result
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error sending SMS: {e}")
+        raise HTTPException(status_code=500, detail="Failed to send SMS")
+
+# SendGrid Email Endpoints
+@api_router.post("/integrations/email/send", response_model=StandardResponse)
+async def send_email(email_data: Dict[str, Any]):
+    """Send email via SendGrid"""
+    try:
+        to_email = email_data.get("to_email")
+        subject = email_data.get("subject")
+        html_content = email_data.get("html_content")
+        plain_text = email_data.get("plain_text")
+        
+        if not to_email or not subject or not html_content:
+            raise HTTPException(status_code=400, detail="to_email, subject, and html_content are required")
+        
+        result = await sendgrid_integration.send_email(to_email, subject, html_content, plain_text)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="Email sent successfully",
+            data=result
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error sending email: {e}")
+        raise HTTPException(status_code=500, detail="Failed to send email")
+
+@api_router.post("/integrations/email/send-notification", response_model=StandardResponse)
+async def send_email_notification(notification_data: Dict[str, Any]):
+    """Send notification email"""
+    try:
+        to_email = notification_data.get("to_email")
+        notification_type = notification_data.get("type", "welcome")
+        data = notification_data.get("data", {})
+        
+        if not to_email:
+            raise HTTPException(status_code=400, detail="to_email is required")
+        
+        result = await sendgrid_integration.send_notification(to_email, notification_type, data)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message=f"{notification_type.title()} notification sent",
+            data=result
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error sending notification: {e}")
+        raise HTTPException(status_code=500, detail="Failed to send notification")
+
+# Voice AI Endpoints
+@api_router.post("/integrations/voice-ai/session", response_model=StandardResponse)
+async def create_voice_ai_session():
+    """Create Voice AI session"""
+    try:
+        result = await voice_ai_integration.create_voice_session()
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="Voice AI session created",
+            data=result
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating voice session: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create voice session")
+
+@api_router.get("/integrations/voice-ai/info", response_model=StandardResponse)
+async def get_voice_ai_info():
+    """Get Voice AI integration information"""
+    try:
+        info = voice_ai_integration.get_integration_info()
+        return StandardResponse(
+            success=True,
+            message="Voice AI information retrieved",
+            data=info
+        )
+    except Exception as e:
+        logger.error(f"Error getting voice AI info: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get voice AI info")
+
+# Vision AI Endpoints
+@api_router.post("/integrations/vision-ai/analyze", response_model=StandardResponse)
+async def analyze_image_vision_ai(analysis_data: Dict[str, Any]):
+    """Analyze image using Vision AI"""
+    try:
+        image_data = analysis_data.get("image_data")
+        prompt = analysis_data.get("prompt", "Analyze this image and describe what you see in detail.")
+        image_type = analysis_data.get("image_type", "base64")
+        
+        if not image_data:
+            raise HTTPException(status_code=400, detail="image_data is required")
+        
+        result = await vision_ai_integration.analyze_image(image_data, prompt, image_type)
+        
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+        
+        return StandardResponse(
+            success=True,
+            message="Image analysis completed",
+            data=result
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error analyzing image: {e}")
+        raise HTTPException(status_code=500, detail="Failed to analyze image")
+
+@api_router.get("/integrations/vision-ai/formats", response_model=StandardResponse)
+async def get_vision_ai_formats():
+    """Get supported image formats for Vision AI"""
+    try:
+        formats = vision_ai_integration.get_supported_formats()
+        return StandardResponse(
+            success=True,
+            message="Supported formats retrieved",
+            data=formats
+        )
+    except Exception as e:
+        logger.error(f"Error getting vision AI formats: {e}")
+        raise HTTPException(status_code=500, detail="Failed to get supported formats")
+
 # Include the API router
 app.include_router(api_router)
 
