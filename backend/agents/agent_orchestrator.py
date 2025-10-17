@@ -55,8 +55,11 @@ class AgentOrchestrator:
         """Initialize the orchestrator and default agents"""
         self.logger.info("Initializing Agent Orchestrator...")
         
-        # Create and register default agents
+        # Create and register all default agents
         await self.create_agent("sales", SalesAgent)
+        await self.create_agent("marketing", MarketingAgent)
+        await self.create_agent("content", ContentAgent)
+        await self.create_agent("analytics", AnalyticsAgent)
         
         # Start worker tasks
         await self.start_workers()
