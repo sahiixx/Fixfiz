@@ -28,7 +28,8 @@ class AgentOrchestrator:
             "sales": SalesAgent,
             "marketing": MarketingAgent, 
             "content": ContentAgent,
-            "analytics": AnalyticsAgent
+            "analytics": AnalyticsAgent,
+            "operations": OperationsAgent
         }
         
         self.task_queue = asyncio.Queue()
