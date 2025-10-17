@@ -1312,9 +1312,34 @@ class BackendTester:
         print("\n⚙️ Agent Control Functions:")
         await self.test_agent_control_functions()
         
+        print("\n🚀 PHASE 2 TESTING - NEW FEATURES:")
+        print("=" * 50)
+        
+        # Test Operations Agent (NEW)
+        print("\n🔧 Operations Agent Testing:")
+        await self.test_operations_automate_workflow()
+        await self.test_operations_process_invoice()
+        await self.test_operations_onboard_client()
+        
+        # Test Plugin System (NEW)
+        print("\n🔌 Plugin System Testing:")
+        await self.test_plugins_available()
+        await self.test_plugins_marketplace()
+        await self.test_plugins_create_template()
+        await self.test_plugins_get_info()
+        
+        # Test Industry Templates (NEW)
+        print("\n📋 Industry Templates Testing:")
+        await self.test_templates_industries()
+        await self.test_templates_specific_industry()
+        await self.test_templates_saas_industry()
+        await self.test_templates_deploy()
+        await self.test_templates_validate()
+        await self.test_templates_custom()
+        
         # Summary
         print("\n" + "=" * 60)
-        print("📊 COMPREHENSIVE TEST SUMMARY")
+        print("📊 COMPREHENSIVE PHASE 2 TEST SUMMARY")
         print("=" * 60)
         
         total_tests = len(self.test_results)
