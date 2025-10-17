@@ -38,6 +38,13 @@ from core.security_manager import security_manager, UserRole, Permission, Compli
 from core.performance_optimizer import performance_optimizer, MetricType, PerformanceMetric
 from integrations.crm_integrations import crm_manager, CRMProvider
 
+# Import Phase 5B-D integrations (Payments, Communication, AI)
+from integrations.stripe_integration import stripe_integration
+from integrations.twilio_integration import twilio_integration
+from integrations.sendgrid_integration import sendgrid_integration
+from integrations.voice_ai_integration import voice_ai_integration
+from integrations.vision_ai_integration import vision_ai_integration
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
