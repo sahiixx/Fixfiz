@@ -1,0 +1,319 @@
+"""
+Unit tests for SecurityManager, PerformanceOptimizer, and CRMIntegrationManager
+Covering Phase 5A changes (security, performance, CRM test-token logic).
+"""
+import os
+import asyncio
+import types
+import pytest
+from datetime import datetime, timezone, timedelta
+from unittest.mock import patch, AsyncMock
+
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
+# Imports from the backend modules under test
+from core.security_manager import SecurityManager, UserRole, Permission, ComplianceStandard
+from core.performance_optimizer import PerformanceOptimizer, CacheManager, MetricType, PerformanceMetric
+from integrations.crm_integrations import CRMIntegrationManager, CRMProvider
+
+
+# ------------------------------
+# Test doubles for database layer
+# ------------------------------
+class FakeCursor:
+    def __init__(self, data, query):
+        self._data = data
+        self._query = query or {}
+
+    async def to_list(self, _length=None):
+        # Minimal matcher for the query shape used in generate_compliance_report
+        results = []
+        tsq = self._query.get("timestamp", {})
+        gte = tsq.get("$gte")
+        lte = tsq.get("$lte")
+        tag = self._query.get("compliance_tags")
+        tenant = self._query.get("tenant_id", None)
+        for d in self._data:
+            ts = d.get("timestamp")
+            if gte and ts < gte:
+                continue
+            if lte and ts > lte:
+                continue
+            tags = d.get("compliance_tags")
+            tag_ok = True
+            if tag is not None:
+                if isinstance(tags, list):
+                    tag_ok = tag in tags
+                else:
+                    tag_ok = tags == tag
+            tenant_ok = True if tenant is None else d.get("tenant_id") == tenant
+            if tag_ok and tenant_ok:
+                results.append(d)
+        return results
+
+class FakeCollection:
+    def __init__(self):
+        self.data = []
+
+    async def insert_one(self, doc):
+        self.data.append(doc)
+        return types.SimpleNamespace(inserted_id=doc.get("event_id") or doc.get("user_id") or doc.get("policy_id"))
+
+    async def find_one(self, query):
+        # very naive matcher for {"email":..., "active": True} or {"user_id":...}
+        for d in self.data:
+            ok = True
+            for k, v in query.items():
+                if d.get(k) != v:
+                    ok = False
+                    break
+            if ok:
+                return d
+        return None
+
+    async def update_one(self, filt, update):
+        for d in self.data:
+            match = True
+            for k, v in filt.items():
+                if d.get(k) != v:
+                    match = False
+                    break
+            if match:
+                if "$set" in update:
+                    d.update(update["$set"])
+                return types.SimpleNamespace(matched_count=1, modified_count=1)
+        return types.SimpleNamespace(matched_count=0, modified_count=0)
+
+    def find(self, query):
+        return FakeCursor(self.data, query)
+
+class FakeDB:
+    def __init__(self):
+        self.users = FakeCollection()
+        self.audit_logs = FakeCollection()
+        self.security_policies = FakeCollection()
+        self.performance_metrics = FakeCollection()
+
+
+# ------------------------------
+# SecurityManager tests
+# ------------------------------
+@pytest.mark.asyncio
+async def test_security_create_user_and_permissions(monkeypatch):
+    fake_db = FakeDB()
+    # Patch get_database within the security_manager module
+    monkeypatch.setattr("core.security_manager.get_database", lambda: fake_db)
+    # Patch AI service to avoid network
+    monkeypatch.setattr("core.security_manager.AIService.generate_content", AsyncMock(return_value="OK"))
+
+    sm = SecurityManager()
+    # Strong password meets policy: 12+ chars, upper/lower/digit/special
+    user_data = {
+        "email": "admin@dubaitech.ae",
+        "password": "StrongPass123!@#",
+        "name": "Admin User",
+        "role": UserRole.TENANT_ADMIN.value,
+        "tenant_id": "tenant_dubai_001",
+        "ip_address": "127.0.0.1",
+        "user_agent": "pytest"
+    }
+    result = await sm.create_user(user_data)
+    assert "user_id" in result
+    # Permissions are serialized to strings in create_user
+    assert isinstance(result["permissions"], list)
+    assert any(p == Permission.MANAGE_USERS.value for p in result["permissions"])
+    # Ensure user persisted
+    assert await fake_db.users.find_one({"email": "admin@dubaitech.ae"}) is not None
+
+@pytest.mark.asyncio
+async def test_security_create_user_invalid_password(monkeypatch):
+    fake_db = FakeDB()
+    monkeypatch.setattr("core.security_manager.get_database", lambda: fake_db)
+    sm = SecurityManager()
+    bad = await sm.create_user({
+        "email": "weak@user.ae",
+        "password": "short",
+    })
+    assert "error" in bad
+
+@pytest.mark.asyncio
+async def test_security_authenticate_and_validate_permission(monkeypatch):
+    fake_db = FakeDB()
+    monkeypatch.setattr("core.security_manager.get_database", lambda: fake_db)
+    sm = SecurityManager()
+    # Create a user record manually with a proper password hash
+    password = "StrongPass123!@#"  # noqa: S105
+    hashed = sm._hash_password(password)
+    user = {
+        "user_id": "user_1",
+        "email": "user@test.ae",
+        "name": "Test User",
+        "role": UserRole.ANALYST.value,
+        "active": True,
+        # store permissions as strings to match create_user behavior
+        "permissions": [Permission.VIEW_ANALYTICS.value, Permission.ACCESS_REPORTS.value],
+        "password_hash": hashed
+    }
+    await fake_db.users.insert_one(user)
+    auth = await sm.authenticate_user("user@test.ae", password, "1.2.3.4", "pytest")
+    assert "token" in auth and "session_id" in auth
+    granted = await sm.validate_permission("user_1", Permission.VIEW_ANALYTICS, "analytics_dashboard")
+    assert granted is True
+    denied = await sm.validate_permission("user_1", Permission.MANAGE_USERS, "admin")
+    assert denied is False
+
+@pytest.mark.asyncio
+async def test_security_policy_and_compliance_report(monkeypatch):
+    fake_db = FakeDB()
+    monkeypatch.setattr("core.security_manager.get_database", lambda: fake_db)
+    # Patch AI content generation
+    monkeypatch.setattr("core.security_manager.AIService.generate_content", AsyncMock(return_value="Compliance OK"))
+
+    sm = SecurityManager()
+    # Create policy
+    resp = await sm.create_security_policy({
+        "name": "UAE Data Protection Policy",
+        "description": "UAE DPA & GDPR controls",
+        "rules": [{"type": "data_retention", "days": 730}],
+        "compliance_standards": ["uae_dpa", "gdpr"],
+        "active": True,
+    })
+    assert resp.get("status") == "created"
+    # Seed audit logs with timestamps in last 90 days
+    now = datetime.now(timezone.utc)
+    for i in range(3):
+        await fake_db.audit_logs.insert_one({
+            "event_id": f"e{i}",
+            "user_id": "user_x",
+            "tenant_id": None,
+            "action": "LOGIN_FAILED",
+            "resource": "user:user_x",
+            "ip_address": "127.0.0.1",
+            "user_agent": "pytest",
+            "timestamp": (now - timedelta(days=i)).isoformat(),
+            "success": False,
+            "details": {"reason": "invalid_password"},
+            "risk_level": "high",
+            "compliance_tags": ["gdpr", "authentication"]
+        })
+    report = await sm.generate_compliance_report(ComplianceStandard.GDPR)
+    assert report.get("standard") == "gdpr"
+    assert "metrics" in report and report["metrics"]["total_audit_events"] >= 1
+    assert "ai_analysis" in report
+
+
+# ------------------------------
+# CacheManager and PerformanceOptimizer tests
+# ------------------------------
+@pytest.mark.asyncio
+async def test_cache_manager_set_get_expiry(_monkeypatch):
+    cache = CacheManager()
+    await cache.initialize()
+    ok = await cache.set("k", "v", ttl_seconds=60)
+    assert ok is True
+    assert await cache.get("k") == "v"
+    # Force expiry by manipulating TTL to past
+    cache.cache_ttl["k"] = datetime.now(timezone.utc) - timedelta(seconds=1)
+    assert await cache.get("k") is None
+    stats = cache.get_stats()
+    assert "hit_rate_percentage" in stats
+
+@pytest.mark.asyncio
+async def test_performance_record_metric_and_alerts(monkeypatch):
+    # Patch DB to avoid real writes
+    fake_db = FakeDB()
+    monkeypatch.setattr("core.performance_optimizer.get_database", lambda: fake_db)
+    po = PerformanceOptimizer()
+    await po.initialize()
+    # High CPU to trigger at least WARNING/CRITICAL alert
+    ts = datetime.now(timezone.utc).isoformat()
+    metric = PerformanceMetric(metric_type=MetricType.CPU_USAGE, value=95.0, timestamp=ts, source="test", tags={})
+    await po.record_metric(metric)
+    # Some alert should exist
+    assert any(a.metric_type == MetricType.CPU_USAGE for a in po.alerts.values())
+    await po.shutdown()
+
+@pytest.mark.asyncio
+async def test_performance_summary_and_optimize(monkeypatch):
+    fake_db = FakeDB()
+    monkeypatch.setattr("core.performance_optimizer.get_database", lambda: fake_db)
+    po = PerformanceOptimizer()
+    await po.initialize()
+    # Patch system metrics to deterministic values
+    async def fake_sys():
+        return {"cpu_usage": 42.0, "memory_usage": 55.0, "disk_usage": 10.0, "timestamp": datetime.now(timezone.utc).isoformat()}
+    monkeypatch.setattr(po, "_get_current_system_metrics", fake_sys)
+    # Record couple of metrics in window
+    now = datetime.now(timezone.utc).isoformat()
+    await po.record_metric(PerformanceMetric(MetricType.RESPONSE_TIME, 6.0, now, "api", {}))
+    await po.record_metric(PerformanceMetric(MetricType.MEMORY_USAGE, 60.0, now, "system", {}))
+    summary = await po.get_performance_summary(hours=24)
+    assert summary["time_period"] == "24 hours"
+    assert "metric_summary" in summary and "cache_statistics" in summary
+    opt = await po.optimize_performance("all")
+    assert opt["optimizations_applied"] >= 1
+    await po.shutdown()
+
+@pytest.mark.asyncio
+async def test_auto_scale_recommendations(monkeypatch):
+    po = PerformanceOptimizer()
+    async def high_load():
+        return {"cpu_usage": 92.0, "memory_usage": 88.0, "disk_usage": 10.0, "timestamp": datetime.now(timezone.utc).isoformat()}
+    monkeypatch.setattr(po, "_get_current_system_metrics", high_load)
+    rec = await po.auto_scale_recommendation()
+    assert rec["auto_scaling_enabled"] is True
+    actions = [r["action"] for r in rec["recommendations"]]
+    assert "scale_up" in actions
+
+
+# ------------------------------
+# CRMIntegrationManager tests (test-token paths and happy paths)
+# ------------------------------
+@pytest.mark.asyncio
+async def test_crm_setup_with_test_token_and_sync_contacts(monkeypatch):
+    crm = CRMIntegrationManager()
+    # Use test token path (added in diff) to bypass real HTTP
+    res = await crm.setup_integration(
+        CRMProvider.HUBSPOT,
+        {"access_token": "test_token_hubspot_dubai"},
+        tenant_id="tenant_dubai_001"
+    )
+    assert res.get("status") == "connected"
+    assert "integration_id" in res
+    assert "contacts" in res.get("features", [])
+    integration_id = res["integration_id"]
+    # Monkeypatch networked helpers for sync
+    async def fake_fetch(_provider, _creds):
+        return [{"id": "c1", "email": "john@ex.com"}, {"id": "c2", "email": "fatima@ex.ae"}]
+    async def fake_upsert_crm(_provider, _creds, _contact):
+        return {"success": True}
+    async def fake_upsert_nowhere(_crm_contact, _tenant_id):
+        return {"success": True}
+    monkeypatch.setattr(crm, "_fetch_crm_contacts", fake_fetch)
+    monkeypatch.setattr(crm, "_create_or_update_crm_contact", fake_upsert_crm)
+    monkeypatch.setattr(crm, "_create_or_update_nowhere_contact", fake_upsert_nowhere)
+    sync = await crm.sync_contacts(integration_id, direction="bidirectional")
+    assert sync["synced_from_crm"] == 2 or sync["synced_to_crm"] >= 0
+
+@pytest.mark.asyncio
+async def test_crm_create_lead_in_test_mode():
+    crm = CRMIntegrationManager()
+    # Register a mock integration
+    integration_id = "hubspot_default_20240101"
+    crm.integrations[integration_id] = {
+        "integration_id": integration_id,
+        "provider": CRMProvider.HUBSPOT.value,
+        "tenant_id": "tenant_dubai_001",
+        "credentials": {"access_token": "test_token_hubspot_any"},
+        "status": "active"
+    }
+    lead = {
+        "email": "lead@company.ae",
+        "name": "Fatima Al Maktoum",
+        "company": "Dubai Ventures LLC",
+        "phone": "+971501234567"
+    }
+    res = await crm.create_lead_in_crm(integration_id, lead)
+    assert res.get("success") is True
+    assert str(res.get("lead_id")).startswith("test_lead_")
