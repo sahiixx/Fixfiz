@@ -271,13 +271,18 @@ class InterAgentCommunication:
         if not collaboration:
             return None
         
+        # Calculate progress safely
+        total_steps = len(collaboration.task_flow) if collaboration.task_flow else 1
+        completed = len(collaboration.completed_steps)
+        progress = (completed / total_steps * 100) if total_steps > 0 else 0
+        
         return {
             "collaboration_id": collaboration_id,
             "status": collaboration.status,
             "participating_agents": list(collaboration.participating_agents),
             "completed_steps": collaboration.completed_steps,
-            "total_steps": len(collaboration.task_flow),
-            "progress_percentage": len(collaboration.completed_steps) / len(collaboration.task_flow) * 100,
+            "total_steps": total_steps,
+            "progress_percentage": progress,
             "results": collaboration.results,
             "shared_context": collaboration.shared_context
         }
