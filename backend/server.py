@@ -2082,6 +2082,14 @@ async def get_vision_ai_formats():
 # Include the API router
 app.include_router(api_router)
 
+# Include Advanced AI Routes (Latest 2025 Models)
+try:
+    from routes.ai_advanced_routes import router as ai_advanced_router
+    app.include_router(ai_advanced_router)
+    logger.info("✅ Advanced AI routes loaded successfully (GPT-4o, Claude 3.5, Gemini 2.0)")
+except Exception as e:
+    logger.warning(f"Advanced AI routes not loaded: {e}")
+
 # Startup and shutdown events
 @app.on_event("startup")
 async def startup_event():
