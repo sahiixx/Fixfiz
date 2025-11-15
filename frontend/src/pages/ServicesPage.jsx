@@ -257,7 +257,7 @@ const ServicesPage = () => {
             <h2 className="text-3xl lg:text-4xl font-bold mb-6 font-mono">
               <span className="text-matrix-green">NEED_CUSTOM</span>
               <br />
-              <span className="text-white">SOLUTION?</span>
+              <span className="text-matrix-green">SOLUTION?</span>
             </h2>
             
             <p className="text-xl text-matrix-green/80 mb-8 font-mono">
