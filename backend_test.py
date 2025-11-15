@@ -3684,16 +3684,8 @@ class BackendTester:
         """Test POST /api/ai/advanced/multimodal - Multimodal analysis with text input"""
         try:
             multimodal_data = {
-                "inputs": {
-                    "text": "I'm launching a new coffee shop in Dubai Marina. The location has high foot traffic from office workers and tourists. What's the best pricing strategy for premium coffee in this area?",
-                    "context": {
-                        "business_type": "coffee_shop",
-                        "location": "Dubai Marina",
-                        "target_customers": ["office_workers", "tourists"],
-                        "positioning": "premium"
-                    }
-                },
-                "analysis_type": "business_strategy"
+                "text": "I'm launching a new coffee shop in Dubai Marina. The location has high foot traffic from office workers and tourists. What's the best pricing strategy for premium coffee in this area?",
+                "task": "business_strategy_analysis"
             }
             
             async with self.session.post(
