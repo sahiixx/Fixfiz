@@ -71,7 +71,7 @@ class SendGridIntegration:
     ) -> Dict[str, Any]:
         """Send notification emails (welcome, alert, etc.)"""
         subjects = {
-            "welcome": "Welcome to NOWHERE Digital Platform",
+            "welcome": "Welcome to NOWHERE.AI Platform",
             "alert": "System Alert Notification",
             "report": "Your Performance Report is Ready"
         }
