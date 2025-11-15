@@ -71,9 +71,9 @@ const HomePage = () => {
               </h1>
             </div>
 
-            <p className="text-xl lg:text-2xl text-matrix-green/80 font-body leading-relaxed animate-fadeInUp" style={{animationDelay: '0.2s'}}>
+            <p className="text-base sm:text-lg lg:text-xl text-matrix-green/80 font-body leading-relaxed animate-fadeInUp" style={{animationDelay: '0.2s'}}>
               Transform your business with AI-powered digital marketing solutions. 
-              <span className="text-matrix-bright-cyan font-semibold"> 500+ successful projects</span> in Dubai & UAE.
+              <span className="text-matrix-cyan font-semibold"> 500+ successful projects</span> in Dubai & UAE.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 animate-fadeInUp" style={{animationDelay: '0.4s'}}>
