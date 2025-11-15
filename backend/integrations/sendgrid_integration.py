@@ -76,7 +76,7 @@ class SendGridIntegration:
             "report": "Your Performance Report is Ready"
         }
         
-        subject = subjects.get(notification_type, "Notification from NOWHERE Digital")
+        subject = subjects.get(notification_type, "Notification from NOWHERE.AI")
         
         html_content = f"""
         <html>
