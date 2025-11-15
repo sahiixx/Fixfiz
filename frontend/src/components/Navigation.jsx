@@ -44,11 +44,8 @@ const Navigation = () => {
         <div className="flex items-center justify-between h-20">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2 group animate-fadeInLeft">
-            <div className="text-2xl font-bold font-heading text-matrix-green group-hover:text-matrix-bright-cyan transition-all duration-300 matrix-text-glow">
-              🌐 NOWHERE
-            </div>
-            <div className="text-sm font-body text-matrix-green/60 group-hover:text-matrix-cyan/80 transition-colors">
-              DIGITAL_MEDIA
+            <div className="text-xl sm:text-2xl font-bold font-heading text-matrix-green group-hover:text-matrix-bright-cyan transition-all duration-300">
+              🤖 NOWHERE.AI
             </div>
           </Link>
 
