@@ -24,7 +24,7 @@ const PlatformPage = () => {
               THE_ULTIMATE
             </span>
             <br />
-            <span className="text-white">DIGITAL_PLATFORM</span>
+            <span className="text-matrix-green">DIGITAL_PLATFORM</span>
           </h1>
           
           <p className="text-xl text-matrix-green/80 max-w-4xl mx-auto font-mono leading-relaxed mb-8">
