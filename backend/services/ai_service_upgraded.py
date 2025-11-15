@@ -78,13 +78,14 @@ class UpgradedAIService:
     """
     
     def __init__(self):
-        self.api_key = settings.openai_api_key
+        # Use Emergent LLM key (universal key for OpenAI, Anthropic, Google)
+        self.api_key = settings.emergent_llm_key or settings.openai_api_key
         self.default_model = AIModelConfig.GPT_4O
         self.reasoning_model = AIModelConfig.O1_MINI
         self.coding_model = AIModelConfig.CLAUDE_3_5_SONNET_20250219
         self.fast_model = AIModelConfig.GEMINI_2_0_FLASH
         
-        logger.info("🚀 Upgraded AI Service initialized with latest 2025 models")
+        logger.info(f"🚀 Upgraded AI Service initialized with latest 2025 models (API key configured: {bool(self.api_key)})")
     
     async def create_chat_session(
         self, 
