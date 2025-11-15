@@ -240,7 +240,7 @@ const HomePage = () => {
             <h2 className="text-3xl lg:text-4xl font-bold mb-6 font-heading">
               <span className="text-matrix-green">READY_TO_DOMINATE</span>
               <br />
-              <span className="text-white">THE_DIGITAL_SPACE?</span>
+              <span className="text-matrix-green">THE_DIGITAL_SPACE?</span>
             </h2>
             
             <p className="text-xl text-matrix-green/80 mb-8 font-body">
