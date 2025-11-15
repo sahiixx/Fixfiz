@@ -391,9 +391,9 @@ class WhiteLabelManager:
             return {"error": f"Failed to create reseller package: {str(e)}"}
     
     def _get_default_branding(self) -> Dict[str, Any]:
-        """Get default NOWHERE branding"""
+        """Get default NOWHERE.AI branding"""
         return {
-            "platform_name": "NOWHERE DIGITAL MEDIA",
+            "platform_name": "NOWHERE.AI",
             "tagline": "AI-Powered Business Operating System",
             "logo_url": "/assets/logo-matrix.svg",
             "colors": {
@@ -403,8 +403,8 @@ class WhiteLabelManager:
             },
             "font_family": "Inter",
             "contact_info": {
-                "support_email": "support@nowheredigitalmediai.agency",
-                "sales_email": "sales@nowheredigitalmediai.agency",
+                "support_email": "support@nowhere.ai",
+                "sales_email": "sales@nowhere.ai",
                 "phone": "+971567148469",
                 "address": "Boulevard Tower, Downtown Dubai"
             }
