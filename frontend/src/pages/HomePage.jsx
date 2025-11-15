@@ -185,9 +185,9 @@ const HomePage = () => {
       {/* Quick Services Preview */}
       <section id="services" data-animate className="py-20 relative z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-16">
-            <h2 className={`text-4xl lg:text-5xl font-bold mb-6 font-heading ${isVisible.services ? 'animate-fadeInUp' : 'opacity-0'}`}>
-              <span className="matrix-text-bright animate-glow">
+          <div className="text-center mb-12">
+            <h2 className={`text-2xl sm:text-3xl lg:text-4xl font-bold mb-4 font-heading ${isVisible.services ? 'animate-fadeInUp' : 'opacity-0'}`}>
+              <span className="text-matrix-green">
                 CORE_SERVICES
               </span>
             </h2>
