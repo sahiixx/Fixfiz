@@ -94,8 +94,8 @@ const MobileMatrixOptimizer = ({ children, className = "" }) => {
 
       {children}
 
-      {/* Mobile Performance Monitor */}
-      {isMobile && process.env.NODE_ENV === 'development' && (
+      {/* Mobile Performance Monitor - Only on localhost */}
+      {isMobile && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
         <div className="fixed bottom-2 left-2 bg-black/80 text-matrix-green text-xs p-2 rounded font-mono border border-matrix-green/30 z-50">
           <div>Mobile: {isMobile ? 'YES' : 'NO'}</div>
           <div>Touch: {touchSupported ? 'YES' : 'NO'}</div>
