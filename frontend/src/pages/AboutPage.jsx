@@ -36,7 +36,7 @@ const AboutPage = () => {
               DIGITAL_PIONEERS
             </span>
             <br />
-            <span className="text-white">OF_THE_MATRIX</span>
+            <span className="text-matrix-green">OF_THE_MATRIX</span>
           </h1>
           
           <p className="text-xl text-matrix-green/80 max-w-4xl mx-auto font-mono leading-relaxed mb-8">
