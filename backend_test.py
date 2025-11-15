@@ -3446,9 +3446,9 @@ class BackendTester:
             async with self.session.get(f"{API_BASE}/ai/advanced/capabilities") as response:
                 if response.status == 200:
                     data = await response.json()
-                    if data.get("success") and "capabilities" in data.get("data", {}):
-                        capabilities = data["data"]["capabilities"]
-                        if isinstance(capabilities, (dict, list)):
+                    if data.get("success") and "core_capabilities" in data.get("data", {}):
+                        capabilities = data["data"]["core_capabilities"]
+                        if isinstance(capabilities, dict) and len(capabilities) > 0:
                             self.log_test("Advanced AI - Get Capabilities", True, "AI capabilities retrieved successfully")
                             return True
                         else:
