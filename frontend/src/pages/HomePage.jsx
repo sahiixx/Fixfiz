@@ -61,8 +61,8 @@ const HomePage = () => {
                 🚀 #1 Digital Marketing Agency in Dubai
               </Badge>
               
-              <h1 className="text-3xl sm:text-5xl lg:text-7xl font-bold font-heading leading-tight sm:leading-tight animate-fadeInUp">
-                <span className="matrix-text-bright animate-glow block mb-1 sm:mb-0">
+              <h1 className="text-3xl sm:text-4xl lg:text-6xl font-bold font-heading leading-tight sm:leading-tight animate-fadeInUp">
+                <span className="text-matrix-green block mb-1 sm:mb-0">
                   DIGITAL
                 </span>
                 <span className="text-white block">
