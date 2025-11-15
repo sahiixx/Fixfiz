@@ -168,11 +168,11 @@ const HomePage = () => {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
             {stats.map((stat, index) => (
               <div key={index} className={`text-center group modern-card hover-lift ${isVisible.stats ? 'animate-scaleIn' : 'opacity-0'}`} style={{animationDelay: `${index * 0.1}s`}}>
-                <div className="p-8">
-                  <div className="text-4xl lg:text-6xl font-bold text-matrix-bright-cyan mb-2 font-heading group-hover:text-white transition-colors duration-300 animate-glow">
+                <div className="p-6">
+                  <div className="text-3xl sm:text-4xl lg:text-5xl font-bold text-matrix-cyan mb-2 font-heading group-hover:text-white transition-colors duration-300">
                     {stat.number}
                   </div>
-                  <div className="text-sm lg:text-base text-matrix-green/80 font-body">
+                  <div className="text-xs sm:text-sm text-matrix-green/80 font-body">
                     {stat.label}
                   </div>
                 </div>
