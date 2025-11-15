@@ -436,8 +436,8 @@ const AdminDashboard = ({ className = "" }) => {
               <div className="p-4 bg-black/30 rounded-lg border border-matrix-green/20">
                 <div className="font-mono text-matrix-green mb-2">MATRIX_VERSION:</div>
                 <div className="text-sm font-mono text-matrix-green/80">
-                  NOWHERE_DIGITAL_v2.0.0<br />
-                  MATRIX_ENHANCED_BUILD
+                  NOWHERE.AI_v2.0.0<br />
+                  AI_ENHANCED_BUILD
                 </div>
               </div>
             </CardContent>
