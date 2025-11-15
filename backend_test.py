@@ -3650,9 +3650,9 @@ class BackendTester:
             test_image_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
             
             vision_data = {
-                "image": test_image_base64,
+                "image_data": test_image_base64,  # Correct parameter name
                 "prompt": "Analyze this image and describe what you see. If it's a business-related image, provide insights for Dubai market context.",
-                "format": "base64"
+                "detail_level": "high"
             }
             
             async with self.session.post(
