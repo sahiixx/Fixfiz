@@ -3566,7 +3566,8 @@ class BackendTester:
         """Test POST /api/ai/advanced/reasoning - Complex problem reasoning"""
         try:
             reasoning_data = {
-                "problem": "A Dubai-based e-commerce company is experiencing 40% cart abandonment rate. They have good traffic but poor conversion. The average order value is AED 250, and they're spending AED 50K monthly on ads. How should they optimize their funnel to improve conversions while maintaining profitability?",
+                "prompt": "A Dubai-based e-commerce company is experiencing 40% cart abandonment rate. They have good traffic but poor conversion. The average order value is AED 250, and they're spending AED 50K monthly on ads. How should they optimize their funnel to improve conversions while maintaining profitability?",
+                "task_type": "business_optimization",
                 "context": {
                     "industry": "ecommerce",
                     "location": "Dubai, UAE",
