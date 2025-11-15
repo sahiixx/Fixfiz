@@ -9,9 +9,9 @@ class Settings(BaseSettings):
     
     # Email Settings
     sendgrid_api_key: str = os.getenv("SENDGRID_API_KEY", "")
-    sendgrid_from_email: str = os.getenv("SENDGRID_FROM_EMAIL", "noreply@nowheredigital.ae")
-    sender_email: str = os.getenv("SENDER_EMAIL", "hello@nowheredigital.ae")
-    admin_email: str = os.getenv("ADMIN_EMAIL", "admin@nowheredigital.ae")
+    sendgrid_from_email: str = os.getenv("SENDGRID_FROM_EMAIL", "noreply@nowhere.ai")
+    sender_email: str = os.getenv("SENDER_EMAIL", "hello@nowhere.ai")
+    admin_email: str = os.getenv("ADMIN_EMAIL", "admin@nowhere.ai")
     
     # AI Settings
     openai_api_key: str = os.getenv("OPENAI_API_KEY", "")
