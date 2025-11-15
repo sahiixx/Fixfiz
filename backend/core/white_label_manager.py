@@ -322,15 +322,23 @@ class WhiteLabelManager:
     async def create_reseller_package(self, reseller_data: Dict[str, Any]) -> Dict[str, Any]:
         """Create a reseller package with custom branding and features - FIXED VERSION"""
         try:
-            # Check if domain already exists
+            # Generate domain if not provided
             domain = reseller_data.get('domain', '')
             if not domain:
-                return {"error": "Domain is required"}
+                # Generate domain from company name or use UUID
+                company_name = reseller_data.get('company_name', reseller_data.get('reseller_name', ''))
+                if company_name:
+                    domain = f"{company_name.lower().replace(' ', '-').replace('_', '-')}.nowheredigital.ae"
+                else:
+                    import uuid
+                    domain = f"reseller-{uuid.uuid4().hex[:8]}.nowheredigital.ae"
             
             db = get_database()
             existing = await db.tenants.find_one({"config.domain": domain})
             if existing:
-                return {"error": "Domain already exists"}
+                # If domain exists, append random suffix
+                import uuid
+                domain = f"{domain.split('.')[0]}-{uuid.uuid4().hex[:4]}.nowheredigital.ae"
             
             # Create base tenant configuration for reseller
             tenant_data = {
