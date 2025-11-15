@@ -197,7 +197,7 @@ const AISolverPage = () => {
             <h2 className="text-3xl lg:text-4xl font-bold mb-6 font-mono">
               <span className="text-purple-300">READY_FOR_AI</span>
               <br />
-              <span className="text-white">TRANSFORMATION?</span>
+              <span className="text-matrix-green">TRANSFORMATION?</span>
             </h2>
             
             <p className="text-xl text-matrix-green/80 mb-8 font-mono">
