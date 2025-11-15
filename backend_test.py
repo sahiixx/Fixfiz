@@ -3412,9 +3412,481 @@ class BackendTester:
         
         return failed_tests == 0
 
+    # ================================================================================================
+    # PRIORITY TESTING - ADVANCED AI SYSTEM (JUST FIXED)
+    # ================================================================================================
+    
+    async def test_advanced_ai_models(self):
+        """Test GET /api/ai/advanced/models - Get available AI models"""
+        try:
+            async with self.session.get(f"{API_BASE}/ai/advanced/models") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "models" in data.get("data", {}):
+                        models = data["data"]["models"]
+                        if isinstance(models, list) and len(models) > 0:
+                            self.log_test("Advanced AI - Get Models", True, f"Retrieved {len(models)} AI models")
+                            return True
+                        else:
+                            self.log_test("Advanced AI - Get Models", False, "No models found", data)
+                            return False
+                    else:
+                        self.log_test("Advanced AI - Get Models", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Advanced AI - Get Models", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Advanced AI - Get Models", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_advanced_ai_capabilities(self):
+        """Test GET /api/ai/advanced/capabilities - Get AI capabilities"""
+        try:
+            async with self.session.get(f"{API_BASE}/ai/advanced/capabilities") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "capabilities" in data.get("data", {}):
+                        capabilities = data["data"]["capabilities"]
+                        if isinstance(capabilities, (dict, list)):
+                            self.log_test("Advanced AI - Get Capabilities", True, "AI capabilities retrieved successfully")
+                            return True
+                        else:
+                            self.log_test("Advanced AI - Get Capabilities", False, "Invalid capabilities format", data)
+                            return False
+                    else:
+                        self.log_test("Advanced AI - Get Capabilities", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Advanced AI - Get Capabilities", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Advanced AI - Get Capabilities", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_advanced_ai_status(self):
+        """Test GET /api/ai/advanced/status - Get AI system status"""
+        try:
+            async with self.session.get(f"{API_BASE}/ai/advanced/status") as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "status" in data.get("data", {}):
+                        status = data["data"]["status"]
+                        if isinstance(status, (dict, str)):
+                            self.log_test("Advanced AI - Get Status", True, "AI system status retrieved successfully")
+                            return True
+                        else:
+                            self.log_test("Advanced AI - Get Status", False, "Invalid status format", data)
+                            return False
+                    else:
+                        self.log_test("Advanced AI - Get Status", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Advanced AI - Get Status", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Advanced AI - Get Status", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_advanced_ai_enhanced_chat(self):
+        """Test POST /api/ai/advanced/enhanced-chat - Enhanced chat with Dubai business query"""
+        try:
+            chat_data = {
+                "message": "I'm planning to open a luxury restaurant in Dubai Marina. What are the key considerations for digital marketing strategy in the UAE market?",
+                "context": {
+                    "business_type": "restaurant",
+                    "location": "Dubai Marina, UAE",
+                    "target_market": "luxury dining",
+                    "budget": "AED 100K - 200K"
+                }
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/ai/advanced/enhanced-chat",
+                json=chat_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "response" in data.get("data", {}):
+                        ai_response = data["data"]["response"]
+                        if ai_response and len(ai_response) > 100:  # Should be substantial response
+                            self.log_test("Advanced AI - Enhanced Chat", True, "Enhanced chat response received successfully")
+                            return True
+                        else:
+                            self.log_test("Advanced AI - Enhanced Chat", False, "Response too short or empty", data)
+                            return False
+                    else:
+                        self.log_test("Advanced AI - Enhanced Chat", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Advanced AI - Enhanced Chat", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Advanced AI - Enhanced Chat", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_advanced_ai_dubai_market_analysis(self):
+        """Test POST /api/ai/advanced/dubai-market-analysis - Dubai market analysis for technology industry"""
+        try:
+            analysis_data = {
+                "industry": "technology",
+                "business_type": "fintech_startup",
+                "target_market": "UAE",
+                "analysis_scope": ["market_size", "competition", "opportunities", "regulations"]
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/ai/advanced/dubai-market-analysis",
+                json=analysis_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "analysis" in data.get("data", {}):
+                        analysis = data["data"]["analysis"]
+                        if analysis and len(str(analysis)) > 200:  # Should be comprehensive analysis
+                            self.log_test("Advanced AI - Dubai Market Analysis", True, "Dubai market analysis completed successfully")
+                            return True
+                        else:
+                            self.log_test("Advanced AI - Dubai Market Analysis", False, "Analysis too short or empty", data)
+                            return False
+                    else:
+                        self.log_test("Advanced AI - Dubai Market Analysis", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Advanced AI - Dubai Market Analysis", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Advanced AI - Dubai Market Analysis", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_advanced_ai_reasoning(self):
+        """Test POST /api/ai/advanced/reasoning - Complex problem reasoning"""
+        try:
+            reasoning_data = {
+                "problem": "A Dubai-based e-commerce company is experiencing 40% cart abandonment rate. They have good traffic but poor conversion. The average order value is AED 250, and they're spending AED 50K monthly on ads. How should they optimize their funnel to improve conversions while maintaining profitability?",
+                "context": {
+                    "industry": "ecommerce",
+                    "location": "Dubai, UAE",
+                    "current_metrics": {
+                        "cart_abandonment": "40%",
+                        "avg_order_value": "AED 250",
+                        "ad_spend": "AED 50K/month"
+                    }
+                }
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/ai/advanced/reasoning",
+                json=reasoning_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "reasoning" in data.get("data", {}):
+                        reasoning = data["data"]["reasoning"]
+                        if reasoning and len(str(reasoning)) > 300:  # Should be detailed reasoning
+                            self.log_test("Advanced AI - Reasoning", True, "Complex problem reasoning completed successfully")
+                            return True
+                        else:
+                            self.log_test("Advanced AI - Reasoning", False, "Reasoning too short or empty", data)
+                            return False
+                    else:
+                        self.log_test("Advanced AI - Reasoning", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Advanced AI - Reasoning", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Advanced AI - Reasoning", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_advanced_ai_code_generation(self):
+        """Test POST /api/ai/advanced/code-generation - Simple Python function generation"""
+        try:
+            code_data = {
+                "description": "Create a Python function that calculates VAT for UAE businesses. The function should take an amount and return the amount with 5% VAT added.",
+                "language": "python",
+                "requirements": [
+                    "Function should be named 'calculate_uae_vat'",
+                    "Should handle decimal amounts properly",
+                    "Should include docstring",
+                    "Should validate input is positive number"
+                ]
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/ai/advanced/code-generation",
+                json=code_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "code" in data.get("data", {}):
+                        code = data["data"]["code"]
+                        if code and "def calculate_uae_vat" in code and len(code) > 100:
+                            self.log_test("Advanced AI - Code Generation", True, "Python function generated successfully")
+                            return True
+                        else:
+                            self.log_test("Advanced AI - Code Generation", False, "Generated code invalid or too short", data)
+                            return False
+                    else:
+                        self.log_test("Advanced AI - Code Generation", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Advanced AI - Code Generation", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Advanced AI - Code Generation", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_advanced_ai_vision(self):
+        """Test POST /api/ai/advanced/vision - Vision analysis with base64 image"""
+        try:
+            # Simple 1x1 red pixel as base64 for testing
+            test_image_base64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
+            
+            vision_data = {
+                "image": test_image_base64,
+                "prompt": "Analyze this image and describe what you see. If it's a business-related image, provide insights for Dubai market context.",
+                "format": "base64"
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/ai/advanced/vision",
+                json=vision_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "analysis" in data.get("data", {}):
+                        analysis = data["data"]["analysis"]
+                        if analysis and len(analysis) > 20:  # Should provide some analysis
+                            self.log_test("Advanced AI - Vision Analysis", True, "Vision analysis completed successfully")
+                            return True
+                        else:
+                            self.log_test("Advanced AI - Vision Analysis", False, "Analysis too short or empty", data)
+                            return False
+                    else:
+                        self.log_test("Advanced AI - Vision Analysis", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Advanced AI - Vision Analysis", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Advanced AI - Vision Analysis", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_advanced_ai_multimodal(self):
+        """Test POST /api/ai/advanced/multimodal - Multimodal analysis with text input"""
+        try:
+            multimodal_data = {
+                "inputs": {
+                    "text": "I'm launching a new coffee shop in Dubai Marina. The location has high foot traffic from office workers and tourists. What's the best pricing strategy for premium coffee in this area?",
+                    "context": {
+                        "business_type": "coffee_shop",
+                        "location": "Dubai Marina",
+                        "target_customers": ["office_workers", "tourists"],
+                        "positioning": "premium"
+                    }
+                },
+                "analysis_type": "business_strategy"
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/ai/advanced/multimodal",
+                json=multimodal_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "analysis" in data.get("data", {}):
+                        analysis = data["data"]["analysis"]
+                        if analysis and len(str(analysis)) > 100:  # Should provide comprehensive analysis
+                            self.log_test("Advanced AI - Multimodal Analysis", True, "Multimodal analysis completed successfully")
+                            return True
+                        else:
+                            self.log_test("Advanced AI - Multimodal Analysis", False, "Analysis too short or empty", data)
+                            return False
+                    else:
+                        self.log_test("Advanced AI - Multimodal Analysis", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Advanced AI - Multimodal Analysis", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Advanced AI - Multimodal Analysis", False, f"Exception: {str(e)}")
+            return False
+
+    # ================================================================================================
+    # PRIORITY VERIFICATION TESTS
+    # ================================================================================================
+
+    async def test_white_label_create_reseller_fixed(self):
+        """Test POST /api/white-label/create-reseller - Should handle missing domain now (FIXED)"""
+        try:
+            # Test without domain to verify the fix
+            reseller_data = {
+                "reseller_name": "Emirates Business Hub",
+                "contact_email": "admin@emiratesbiz.ae",
+                "package_type": "premium",
+                "branding": {
+                    "company_name": "Emirates Business Hub",
+                    "logo_url": "https://emiratesbiz.ae/logo.png",
+                    "primary_color": "#1e40af",
+                    "secondary_color": "#f59e0b"
+                },
+                "features": ["white_label_dashboard", "custom_domain", "api_access", "priority_support"],
+                "pricing": {
+                    "setup_fee": "AED 5,000",
+                    "monthly_fee": "AED 2,500",
+                    "commission_rate": "15%"
+                }
+                # Intentionally omitting 'domain' to test the fix
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/white-label/create-reseller",
+                json=reseller_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "reseller_id" in data.get("data", {}):
+                        reseller_id = data["data"]["reseller_id"]
+                        self.log_test("White Label - Create Reseller (FIXED)", True, f"Reseller created successfully without domain: {reseller_id}")
+                        return True
+                    else:
+                        self.log_test("White Label - Create Reseller (FIXED)", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("White Label - Create Reseller (FIXED)", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("White Label - Create Reseller (FIXED)", False, f"Exception: {str(e)}")
+            return False
+
+    async def test_inter_agent_delegate_task_verify(self):
+        """Test POST /api/agents/delegate-task - Verify if still failing"""
+        try:
+            delegation_data = {
+                "from_agent_id": "sales_agent",
+                "to_agent_id": "marketing_agent",
+                "task_data": {
+                    "task_type": "create_campaign",
+                    "client_info": {
+                        "name": "Dubai Fashion Boutique",
+                        "industry": "fashion_retail",
+                        "location": "Dubai Mall, UAE"
+                    },
+                    "campaign_requirements": {
+                        "budget": "AED 75,000",
+                        "duration": "3 months",
+                        "objectives": ["brand_awareness", "sales_increase"]
+                    }
+                }
+            }
+            
+            async with self.session.post(
+                f"{API_BASE}/agents/delegate-task",
+                json=delegation_data,
+                headers={"Content-Type": "application/json"}
+            ) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    if data.get("success") and "delegation_id" in data.get("data", {}):
+                        delegation_id = data["data"]["delegation_id"]
+                        self.log_test("Inter-Agent - Task Delegation (VERIFY)", True, f"Task delegation successful: {delegation_id}")
+                        return True
+                    else:
+                        self.log_test("Inter-Agent - Task Delegation (VERIFY)", False, "Invalid response structure", data)
+                        return False
+                else:
+                    self.log_test("Inter-Agent - Task Delegation (VERIFY)", False, f"HTTP {response.status}", await response.text())
+                    return False
+        except Exception as e:
+            self.log_test("Inter-Agent - Task Delegation (VERIFY)", False, f"Exception: {str(e)}")
+            return False
+
+    async def run_priority_tests(self):
+        """Run priority tests as requested in the review"""
+        print(f"🚀 Starting PRIORITY Backend Testing - Post-Fix Verification")
+        print(f"Backend URL: {BACKEND_URL}")
+        print(f"API Base: {API_BASE}")
+        print("=" * 80)
+        
+        # 1. ADVANCED AI SYSTEM (JUST FIXED - TEST ALL)
+        print("\n🔥 PRIORITY 1: ADVANCED AI SYSTEM (JUST FIXED)")
+        print("-" * 50)
+        await self.test_advanced_ai_models()  # Already tested working
+        await self.test_advanced_ai_capabilities()
+        await self.test_advanced_ai_status()
+        await self.test_advanced_ai_enhanced_chat()
+        await self.test_advanced_ai_dubai_market_analysis()
+        await self.test_advanced_ai_reasoning()
+        await self.test_advanced_ai_code_generation()
+        await self.test_advanced_ai_vision()
+        await self.test_advanced_ai_multimodal()
+        
+        # 2. WHITE LABEL SYSTEM (FIXED - VERIFY)
+        print("\n🔧 PRIORITY 2: WHITE LABEL SYSTEM (FIXED - VERIFY)")
+        print("-" * 50)
+        await self.test_white_label_create_reseller_fixed()
+        
+        # 3. INTER-AGENT COMMUNICATION (VERIFY)
+        print("\n🤝 PRIORITY 3: INTER-AGENT COMMUNICATION (VERIFY)")
+        print("-" * 50)
+        await self.test_inter_agent_delegate_task_verify()
+        
+        # 4. QUICK SPOT CHECKS (ensure nothing broke)
+        print("\n✅ PRIORITY 4: QUICK SPOT CHECKS")
+        print("-" * 50)
+        await self.test_health_endpoint()
+        await self.test_contact_form_submission()
+        await self.test_ai_problem_analysis_valid_request()
+        await self.test_sales_agent_qualify_lead()
+        
+        # Print Priority Summary
+        print("\n" + "=" * 80)
+        print("🎯 PRIORITY TESTING SUMMARY")
+        print("=" * 80)
+        
+        total_tests = len(self.test_results)
+        passed_tests = len([t for t in self.test_results if t["success"]])
+        failed_tests = len(self.failed_tests)
+        success_rate = (passed_tests / total_tests * 100) if total_tests > 0 else 0
+        
+        print(f"Total Priority Tests: {total_tests}")
+        print(f"Passed: {passed_tests}")
+        print(f"Failed: {failed_tests}")
+        print(f"Success Rate: {success_rate:.1f}%")
+        
+        if self.failed_tests:
+            print(f"\n❌ Failed Priority Tests:")
+            for test in self.failed_tests:
+                print(f"   - {test}")
+        else:
+            print(f"\n🎉 All priority tests passed!")
+        
+        # Detailed results for critical failures
+        if failed_tests > 0:
+            print(f"\n🔍 DETAILED FAILURE ANALYSIS:")
+            for result in self.test_results:
+                if not result["success"]:
+                    print(f"\n❌ {result['test']}")
+                    print(f"   Details: {result['details']}")
+                    if result.get('response'):
+                        print(f"   Response: {str(result['response'])[:200]}...")
+        
+        print(f"\n🎯 Expected Result: 95%+ success rate with all critical systems working")
+        print(f"🎯 Actual Result: {success_rate:.1f}% success rate")
+        
+        return success_rate >= 95.0
+
     async def run_all_tests(self):
-        """Legacy test runner - redirects to comprehensive E2E tests"""
-        return await self.run_comprehensive_e2e_tests()
+        """Legacy test runner - redirects to priority tests for this review"""
+        return await self.run_priority_tests()
 
 async def main():
     """Main test runner"""
