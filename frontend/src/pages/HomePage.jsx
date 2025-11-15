@@ -53,9 +53,9 @@ const HomePage = () => {
       <div className="fixed inset-0 z-0 bg-matrix-gradient-dark" />
       
       {/* Hero Section */}
-      <section className="min-h-screen flex items-center justify-center relative z-10 px-4 sm:px-6 lg:px-8">
+      <section className="min-h-screen flex items-center justify-center relative z-10 px-4 sm:px-6 lg:px-8 pt-20 sm:pt-0">
         <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-          <div className="space-y-8 animate-fadeInLeft">
+          <div className="space-y-6 sm:space-y-8 animate-fadeInLeft">
             <div className="space-y-4">
               <Badge className="bg-gradient-to-r from-matrix-green/20 to-matrix-cyan/20 text-matrix-green border-matrix-green/40 font-body animate-scaleIn">
                 🚀 #1 Digital Marketing Agency in Dubai
