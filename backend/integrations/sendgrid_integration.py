@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class SendGridIntegration:
     def __init__(self):
         self.api_key = os.getenv("SENDGRID_API_KEY")
-        self.from_email = os.getenv("SENDGRID_FROM_EMAIL", "noreply@nowheredigital.ae")
+        self.from_email = os.getenv("SENDGRID_FROM_EMAIL", "noreply@nowhere.ai")
         self.client = None
         
         if self.api_key:
