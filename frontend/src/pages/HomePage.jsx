@@ -65,7 +65,7 @@ const HomePage = () => {
                 <span className="text-matrix-green block mb-1">
                   DIGITAL
                 </span>
-                <span className="text-white block">
+                <span className="text-matrix-green block">
                   SUPREMACY
                 </span>
               </h1>
