@@ -434,7 +434,7 @@ const ContactPage = () => {
             <h2 className="text-3xl lg:text-4xl font-bold mb-6 font-mono">
               <span className="text-matrix-green">READY_TO_BEGIN</span>
               <br />
-              <span className="text-white">YOUR_JOURNEY?</span>
+              <span className="text-matrix-green">YOUR_JOURNEY?</span>
             </h2>
             
             <p className="text-xl text-matrix-green/80 mb-8 font-mono">
