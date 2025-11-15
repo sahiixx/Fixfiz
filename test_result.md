@@ -423,11 +423,12 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Latest AI Models Integration (GPT-4o, Claude 3.5, Gemini 2.0)"
-    - "Advanced AI Capabilities Testing"
-  stuck_tasks: []
-  test_all: false
-  test_priority: "new_features"
+    - "AI Solver Form Visibility Issue"
+    - "Frontend Console Errors Cleanup"
+  stuck_tasks:
+    - "AI Solver Form Visibility Issue"
+  test_all: true
+  test_priority: "critical_first"
 
   - task: "CSS Compilation Fix - Border/Background Classes"
     implemented: true
