@@ -122,7 +122,7 @@ const PlatformPage = () => {
             <h2 className="text-3xl lg:text-4xl font-bold mb-6 font-mono">
               <span className="text-purple-300">READY_TO_EXPERIENCE</span>
               <br />
-              <span className="text-white">THE_PLATFORM?</span>
+              <span className="text-matrix-green">THE_PLATFORM?</span>
             </h2>
             
             <p className="text-xl text-matrix-green/80 mb-8 font-mono">
