@@ -479,7 +479,7 @@ test_plan:
   - task: "Frontend Console Errors Cleanup"
     implemented: true
     working: false
-    file: "frontend/src/"
+    file: "frontend/src/components/MobileMatrixOptimizer.jsx"
     stuck_count: 0
     priority: "medium"
     needs_retesting: false
@@ -490,6 +490,9 @@ test_plan:
         - working: false
           agent: "testing"
           comment: "⚠️ CONSOLE ERRORS STILL PRESENT: During comprehensive E2E testing, found 2 React JSX attribute warnings in console: 'Received %s for a non-boolean attribute %s. If you want to write it to the DOM, pass a string instead: %s=%s or %s={value.toString()}.' These are non-critical warnings but should be cleaned up for production. The errors appear to be related to boolean attributes being passed incorrectly to DOM elements. While website functionality is not affected, these warnings indicate code quality issues that should be addressed for clean production deployment."
+        - working: false
+          agent: "testing"
+          comment: "🎯 JSX ATTRIBUTE WARNING IDENTIFIED: Comprehensive console testing revealed the exact source of React JSX attribute warnings. FOUND: 1 JSX attribute warning triggered during viewport changes/component re-renders: 'Received `true` for a non-boolean attribute `jsx`. If you want to write it to the DOM, pass a string instead: jsx=\"true\" or jsx={value.toString()}.' ROOT CAUSE: MobileMatrixOptimizer.jsx component uses `<style jsx>` tags (lines 49, 135, 168) from styled-jsx library. The `jsx` attribute is being passed as boolean `true` instead of string, causing React warnings. ADDITIONAL ISSUES: Multiple 502 backend errors during API calls (health check, analytics endpoints). SOLUTION NEEDED: Either install styled-jsx library properly or replace `<style jsx>` with standard CSS-in-JS approach. Non-critical but affects code quality for production deployment."
 
   - task: "Comprehensive E2E Website Analysis & Review - ALL Pages"
     implemented: true
