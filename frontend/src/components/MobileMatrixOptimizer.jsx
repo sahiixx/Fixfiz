@@ -46,7 +46,7 @@ const MobileMatrixOptimizer = ({ children, className = "" }) => {
     <div className={`${className} ${mobileClasses} ${orientationClasses} ${touchClasses}`}>
       {/* Mobile Navigation Optimization */}
       {isMobile && (
-        <style jsx>{`
+        <style>{`
           .mobile-optimized {
             /* Optimize scrolling on mobile */
             -webkit-overflow-scrolling: touch;
