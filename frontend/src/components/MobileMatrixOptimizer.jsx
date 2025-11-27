@@ -132,7 +132,7 @@ export const MobileMatrixRain = ({ className = "" }) => {
     return (
       <div className={`absolute inset-0 pointer-events-none opacity-30 ${className}`}>
         <div className="matrix-mobile-rain" />
-        <style jsx>{`
+        <style>{`
           .matrix-mobile-rain {
             background: linear-gradient(
               180deg,
