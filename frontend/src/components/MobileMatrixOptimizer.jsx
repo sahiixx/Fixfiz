@@ -165,7 +165,7 @@ export const MobileMatrixText = ({ children, className = "" }) => {
     <div className={`${className} ${isMobile ? 'mobile-matrix-text' : ''}`}>
       {children}
       {isMobile && (
-        <style jsx>{`
+        <style>{`
           .mobile-matrix-text {
             font-size: clamp(1.5rem, 6vw, 3rem);
             line-height: 1.2;
