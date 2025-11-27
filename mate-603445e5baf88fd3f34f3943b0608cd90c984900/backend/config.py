@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: List[str] = [
         "http://localhost:3000",
-        "https://fix-it-6.preview.emergentagent.com"
+        "https://quick-repair-18.preview.emergentagent.com"
     ]
     
     # API Settings
