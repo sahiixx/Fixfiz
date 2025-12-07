@@ -1,6 +1,6 @@
 """
 My Plugin - Custom Plugin
-Test plugin
+Connect with Dubai business services and APIs
 """
 from typing import Dict, Any, List
 from core.plugin_manager import PluginInterface
@@ -21,11 +21,11 @@ class MypluginPlugin(PluginInterface):
     
     @property
     def description(self) -> str:
-        return "Test plugin"
+        return "Connect with Dubai business services and APIs"
     
     @property
     def author(self) -> str:
-        return "Plugin Developer"
+        return "NOWHERE Digital"
     
     @property
     def capabilities(self) -> List[AgentCapability]:
