@@ -4,7 +4,7 @@
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
 
-// Mock window.matchMedia for tests
+// Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: jest.fn().mockImplementation(query => ({
@@ -38,13 +38,13 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
 };
 
-// Set up console error suppression for known warnings
+// Suppress console errors during tests (optional)
 const originalError = console.error;
 beforeAll(() => {
   console.error = (...args) => {
     if (
       typeof args[0] === 'string' &&
-      args[0].includes('Not implemented: HTMLFormElement.prototype.submit')
+      args[0].includes('Warning: ReactDOM.render')
     ) {
       return;
     }
