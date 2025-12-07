@@ -437,7 +437,11 @@ class TestCORSOriginsMigrationVerification:
         assert has_production, "Missing production environment"
         
     def test_cors_origins_string_format_in_environment(self):
-        """Test that CORS origins can be properly formatted as environment variable"""
+        """
+        Verify that CORS origins can be serialized to and reconstructed from an environment-variable-style comma-separated string.
+        
+        Asserts that the comma-joined representation has no spaces after commas and that splitting that string by commas yields the same number of origins as the original list.
+        """
         test_settings = Settings()
         
         # Verify that if we export these origins back to env var format, they work
