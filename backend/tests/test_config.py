@@ -492,7 +492,11 @@ class TestAPIConfiguration:
                 assert settings.debug is True
     
     def test_api_debug_mode_invalid_values(self):
-        """Test API debug mode with invalid values defaults to False"""
+        """
+        Verify Settings.debug falls back to the default when DEBUG contains invalid values.
+        
+        This test ensures that setting the DEBUG environment variable to unsupported values such as "yes", "1", "enabled", or an empty string results in the Settings.debug attribute using the default (disabled) value.
+        """
         test_values = ["yes", "1", "enabled", ""]
         
         for value in test_values:
