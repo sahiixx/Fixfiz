@@ -471,7 +471,9 @@ class TestConfigurationDocumentation:
     """Tests to ensure configuration is well-documented and maintainable."""
     
     def test_config_has_cors_comment(self):
-        """Test that configuration file has comments explaining CORS setup."""
+        """
+        Verify the Settings source contains comments or mentions related to CORS configuration.
+        """
         import inspect
         from backend.config import Settings
         
@@ -482,7 +484,11 @@ class TestConfigurationDocumentation:
         assert "cors" in source.lower() or "CORS" in source
     
     def test_settings_class_is_documented(self):
-        """Test that Settings class has docstring."""
+        """
+        Verify the Settings class is documented.
+        
+        Asserts that the Settings class has a non-empty docstring or its source contains documentation/comments.
+        """
         from backend.config import Settings
         
         # Should have some documentation
@@ -509,7 +515,9 @@ class TestCORSOriginsConfiguration:
             f"Expected preview URL {preview_url} not found in CORS origins"
     
     def test_cors_origins_excludes_old_preview_url(self):
-        """Test that the OLD preview URL is NOT in CORS origins (regression test)."""
+        """
+        Verifies that the deprecated preview URL is not included in the Settings.cors_origins (regression test).
+        """
         test_settings = Settings()
         old_preview_url = "https://fix-it-6.preview.emergentagent.com"
         assert old_preview_url not in test_settings.cors_origins, \
@@ -591,7 +599,9 @@ class TestCORSOriginsSecurity:
     """Security-focused tests for CORS configuration."""
     
     def test_no_allow_all_origin(self):
-        """Test that CORS doesn't use wildcard 'allow all' configuration."""
+        """
+        Ensure CORS origins do not include the wildcard '*'.
+        """
         test_settings = Settings()
         assert "*" not in test_settings.cors_origins
     

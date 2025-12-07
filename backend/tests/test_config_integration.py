@@ -139,7 +139,11 @@ class TestConfigurationConsistency:
     """Tests for configuration consistency"""
     
     def test_settings_singleton_behavior(self):
-        """Test that settings behave consistently"""
+        """
+        Verify that two separate Settings instances produce identical CORS origins.
+        
+        Asserts that creating multiple Settings objects yields the same value for `cors_origins`.
+        """
         settings1 = Settings()
         settings2 = Settings()
         
@@ -166,7 +170,11 @@ class TestMateDirectoryConfigConsistency:
     """Test consistency between main and mate directory configs"""
     
     def test_both_configs_have_new_preview_url(self):
-        """Test that both config files have the updated preview URL"""
+        """
+        Verify Settings includes the updated preview host in its CORS origins.
+        
+        Checks that "create-25.preview.emergentagent.com" is present in settings.cors_origins.
+        """
         # This is a validation test for the mate directory copy
         settings = Settings()
         
