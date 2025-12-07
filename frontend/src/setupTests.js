@@ -38,20 +38,9 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
 };
 
-// Suppress console errors during tests (optional)
-const originalError = console.error;
-beforeAll(() => {
-  console.error = (...args) => {
-    if (
-      typeof args[0] === 'string' &&
-      args[0].includes('Warning: ReactDOM.render')
-    ) {
-      return;
-    }
-    originalError.call(console, ...args);
-  };
-});
-
-afterAll(() => {
-  console.error = originalError;
+// Set up default navigator properties
+Object.defineProperty(navigator, 'maxTouchPoints', {
+  writable: true,
+  configurable: true,
+  value: 0,
 });
