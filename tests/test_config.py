@@ -163,3 +163,144 @@ class TestSettingsValidation:
         
         assert 0 < test_settings.rate_limit_requests <= 10000
         assert 0 < test_settings.rate_limit_period <= 3600
+
+    @patch.dict(os.environ, {
+        'CORS_ORIGINS': 'http://localhost:3000,https://create-25.preview.emergentagent.com,https://fix-it-6.emergent.host'
+    })
+    def test_cors_origins_with_new_preview_url(self):
+        """Test CORS origins with the new create-25 preview URL"""
+        test_settings = Settings()
+        
+        assert isinstance(test_settings.cors_origins, list)
+        assert len(test_settings.cors_origins) == 3
+        assert "http://localhost:3000" in test_settings.cors_origins
+        assert "https://create-25.preview.emergentagent.com" in test_settings.cors_origins
+        assert "https://fix-it-6.emergent.host" in test_settings.cors_origins
+        
+    def test_cors_origins_default_includes_preview_url(self):
+        """Test that default CORS origins include the new preview URL"""
+        test_settings = Settings()
+        
+        # Check that the new preview URL is in defaults
+        assert "https://create-25.preview.emergentagent.com" in test_settings.cors_origins
+        
+    @patch.dict(os.environ, {
+        'CORS_ORIGINS': 'https://example.com,https://test.com'
+    })
+    def test_cors_origins_custom_override(self):
+        """Test CORS origins can be fully overridden via environment"""
+        test_settings = Settings()
+        
+        assert len(test_settings.cors_origins) == 2
+        assert "https://example.com" in test_settings.cors_origins
+        assert "https://test.com" in test_settings.cors_origins
+        assert "http://localhost:3000" not in test_settings.cors_origins
+        
+    @patch.dict(os.environ, {
+        'CORS_ORIGINS': 'https://single-origin.com'
+    })
+    def test_cors_origins_single_value(self):
+        """Test CORS origins with a single value"""
+        test_settings = Settings()
+        
+        assert len(test_settings.cors_origins) == 1
+        assert test_settings.cors_origins[0] == "https://single-origin.com"
+        
+    @patch.dict(os.environ, {
+        'CORS_ORIGINS': ''
+    })
+    def test_cors_origins_empty_string(self):
+        """Test CORS origins with empty string"""
+        test_settings = Settings()
+        
+        # Empty string split results in ['']
+        assert isinstance(test_settings.cors_origins, list)
+        
+    def test_cors_origins_url_format_validation(self):
+        """Test that CORS origins are valid URL formats"""
+        test_settings = Settings()
+        
+        for origin in test_settings.cors_origins:
+            # Each origin should start with http:// or https://
+            assert origin.startswith('http://') or origin.startswith('https://'), \
+                f"Invalid origin format: {origin}"
+                
+    def test_cors_origins_no_trailing_slashes(self):
+        """Test that CORS origins don't have trailing slashes"""
+        test_settings = Settings()
+        
+        for origin in test_settings.cors_origins:
+            assert not origin.endswith('/'), \
+                f"Origin should not have trailing slash: {origin}"
+                
+    @patch.dict(os.environ, {
+        'CORS_ORIGINS': 'http://localhost:3000,https://api.example.com,https://app.example.com'
+    })
+    def test_cors_origins_multiple_domains(self):
+        """Test CORS origins with multiple different domains"""
+        test_settings = Settings()
+        
+        assert len(test_settings.cors_origins) == 3
+        # Verify no duplicates
+        assert len(set(test_settings.cors_origins)) == len(test_settings.cors_origins)
+        
+    def test_cors_origins_preserves_order(self):
+        """Test that CORS origins maintain their order"""
+        test_settings = Settings()
+        
+        # Default should have localhost first
+        assert test_settings.cors_origins[0] == "http://localhost:3000"
+
+
+class TestCORSSecurityValidation:
+    """Test CORS security configurations and edge cases"""
+    
+    def test_cors_origins_localhost_development(self):
+        """Test localhost is available for development"""
+        test_settings = Settings()
+        
+        localhost_origins = [o for o in test_settings.cors_origins if 'localhost' in o]
+        assert len(localhost_origins) > 0, "Localhost should be in CORS origins for development"
+        
+    def test_cors_origins_https_production(self):
+        """Test production origins use HTTPS"""
+        test_settings = Settings()
+        
+        production_origins = [o for o in test_settings.cors_origins if 'localhost' not in o]
+        for origin in production_origins:
+            assert origin.startswith('https://'), \
+                f"Production origin must use HTTPS: {origin}"
+                
+    @patch.dict(os.environ, {
+        'CORS_ORIGINS': 'http://unsecure.com,https://secure.com'
+    })
+    def test_cors_mixed_http_https_warning(self):
+        """Test handling of mixed HTTP/HTTPS origins"""
+        test_settings = Settings()
+        
+        http_origins = [o for o in test_settings.cors_origins if o.startswith('http://')]
+        https_origins = [o for o in test_settings.cors_origins if o.startswith('https://')]
+        
+        # Both should be present as configured
+        assert len(http_origins) > 0
+        assert len(https_origins) > 0
+        
+    def test_cors_origins_wildcard_not_present(self):
+        """Test that wildcards are not used in CORS origins"""
+        test_settings = Settings()
+        
+        for origin in test_settings.cors_origins:
+            assert '*' not in origin, \
+                "Wildcard CORS origins are a security risk"
+                
+    @patch.dict(os.environ, {
+        'CORS_ORIGINS': 'http://localhost:3000,http://localhost:3001,https://staging.example.com'
+    })
+    def test_cors_multiple_localhost_ports(self):
+        """Test handling multiple localhost ports"""
+        test_settings = Settings()
+        
+        localhost_origins = [o for o in test_settings.cors_origins if 'localhost' in o]
+        assert len(localhost_origins) == 2
+        assert "http://localhost:3000" in test_settings.cors_origins
+        assert "http://localhost:3001" in test_settings.cors_origins
