@@ -24,7 +24,7 @@ class HealthChecker:
             await db.client.admin.command('ping')
             
             # Get database stats
-            stats = await db.command('dbStats')
+            stats = await database.command('dbStats')
             
             return {
                 "status": "healthy",
