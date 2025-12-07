@@ -45,6 +45,16 @@ from integrations.sendgrid_integration import sendgrid_integration
 from integrations.voice_ai_integration import voice_ai_integration
 from integrations.vision_ai_integration import vision_ai_integration
 
+# Import optimizations
+try:
+    from cache_manager import cache_manager, cached
+    from error_handlers import register_error_handlers
+    from i18n import i18n, get_language_from_header
+    OPTIMIZATIONS_ENABLED = True
+except ImportError:
+    logger.warning("Optimization modules not found, using defaults")
+    OPTIMIZATIONS_ENABLED = False
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
