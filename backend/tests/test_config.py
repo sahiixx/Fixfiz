@@ -238,7 +238,9 @@ class TestEnvironmentVariables:
             assert test_settings.debug is True
     
     def test_debug_mode_disabled(self):
-        """Test debug mode disabled by default and via explicit false"""
+        """
+        Verifies that setting the DEBUG environment variable to "false" results in Settings.debug being False.
+        """
         with patch.dict(os.environ, {"DEBUG": "false"}, clear=True):
             test_settings = Settings()
             assert test_settings.debug is False
@@ -356,7 +358,9 @@ class TestDatabaseConfiguration:
             assert test_settings.mongo_url == atlas_url
     
     def test_db_name_default(self):
-        """Test default database name"""
+        """
+        Verify Settings defaults db_name to "nowhere_digital" when no environment variables are set.
+        """
         with patch.dict(os.environ, {}, clear=True):
             test_settings = Settings()
             assert test_settings.db_name == "nowhere_digital"
@@ -490,7 +494,11 @@ class TestEdgeCasesAndErrorHandling:
             assert all(isinstance(ft, str) for ft in test_settings.allowed_file_types)
     
     def test_settings_immutability_attempt(self):
-        """Test that settings values can be accessed correctly"""
+        """
+        Verify Settings exposes configuration attributes for read access.
+        
+        Creates a fresh Settings instance with a cleared environment and asserts the default `db_name` equals "nowhere_digital".
+        """
         with patch.dict(os.environ, {}, clear=True):
             test_settings = Settings()
             original_db = test_settings.db_name

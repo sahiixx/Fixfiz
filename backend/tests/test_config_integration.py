@@ -99,7 +99,11 @@ class TestSettingsInitialization:
         assert len(prod_origins) > 0
     
     def test_preview_environment(self):
-        """Test settings in preview environment"""
+        """
+        Verify that Settings provides at least one CORS origin containing "preview.emergentagent.com".
+        
+        Asserts that the settings.cors_origins list includes one or more preview emergentagent.com URLs.
+        """
         settings = Settings()
         
         # Should have preview URLs
@@ -117,7 +121,11 @@ class TestCORSSecurityValidation:
         assert "*" not in settings.cors_origins
     
     def test_https_for_production(self):
-        """Test that production URLs use HTTPS"""
+        """
+        Ensure all non-localhost origins that contain "emergent" use HTTPS.
+        
+        Asserts that each origin containing "emergent" and not containing "localhost" begins with "https://".
+        """
         settings = Settings()
         
         for origin in settings.cors_origins:

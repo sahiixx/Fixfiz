@@ -570,7 +570,11 @@ class TestCORSOriginsConfiguration:
                     f"Production/preview URL must use HTTPS: {origin}"
     
     def test_cors_origins_security_no_wildcards(self):
-        """Test that CORS origins don't contain wildcards (security)."""
+        """
+        Verify that configured CORS origins do not contain wildcard characters.
+        
+        Asserts that no origin string contains the '*' character; failing the test indicates a security risk.
+        """
         test_settings = Settings()
         for origin in test_settings.cors_origins:
             assert "*" not in origin, \
@@ -591,7 +595,9 @@ class TestCORSOriginsSecurity:
     """Security-focused tests for CORS configuration."""
     
     def test_no_allow_all_origin(self):
-        """Test that CORS doesn't use wildcard 'allow all' configuration."""
+        """
+        Ensure the configured CORS origins do not include the wildcard '*' allowing all origins.
+        """
         test_settings = Settings()
         assert "*" not in test_settings.cors_origins
     
