@@ -50,9 +50,12 @@ try:
     from cache_manager import cache_manager, cached
     from error_handlers import register_error_handlers
     from i18n import i18n, get_language_from_header
+    from rate_limiter import RateLimitMiddleware
+    from request_tracker import RequestIDMiddleware
+    from health_check import get_health_status
     OPTIMIZATIONS_ENABLED = True
-except ImportError:
-    logger.warning("Optimization modules not found, using defaults")
+except ImportError as e:
+    logger.warning(f"Optimization modules not found: {e}, using defaults")
     OPTIMIZATIONS_ENABLED = False
 
 # Configure logging
