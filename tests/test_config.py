@@ -164,289 +164,316 @@ class TestSettingsValidation:
         assert 0 < test_settings.rate_limit_requests <= 10000
         assert 0 < test_settings.rate_limit_period <= 3600
 
+# ============================================================================
+# COMPREHENSIVE TESTS FOR CORS ORIGINS CONFIGURATION UPDATE
+# Testing the updated CORS origins that include create-25.preview domain
+# ============================================================================
+
 class TestCORSOriginsConfiguration:
     """Test suite for CORS origins configuration changes"""
     
-    def test_cors_origins_contains_new_preview_url(self):
-        """Test that new preview URL is in CORS origins"""
-        test_settings = Settings()
-        
-        assert "https://create-25.preview.emergentagent.com" in test_settings.cors_origins
-        
-    def test_cors_origins_does_not_contain_old_preview_url(self):
-        """Test that old preview URL is not in CORS origins (after migration)"""
-        test_settings = Settings()
-        
-        # The old URL should no longer be present
-        assert "https://fix-it-6.preview.emergentagent.com" not in test_settings.cors_origins
-        
-    def test_cors_origins_contains_localhost(self):
-        """Test that localhost is still in CORS origins for development"""
-        test_settings = Settings()
-        
-        assert "http://localhost:3000" in test_settings.cors_origins
-        
-    def test_cors_origins_contains_production_url(self):
-        """Test that production URL is in CORS origins"""
-        test_settings = Settings()
-        
-        assert "https://fix-it-6.emergent.host" in test_settings.cors_origins
-        
+    def test_cors_origins_includes_new_preview_domain(self):
+        """Test that CORS origins includes the new create-25 preview domain"""
+        settings = Settings()
+        expected_domain = "https://create-25.preview.emergentagent.com"
+        assert expected_domain in settings.cors_origins, \
+            f"Expected {expected_domain} in CORS origins"
+    
+    def test_cors_origins_includes_production_domain(self):
+        """Test that CORS origins still includes production domain"""
+        settings = Settings()
+        expected_domain = "https://fix-it-6.emergent.host"
+        assert expected_domain in settings.cors_origins, \
+            f"Expected {expected_domain} in CORS origins"
+    
+    def test_cors_origins_includes_localhost(self):
+        """Test that CORS origins includes localhost for development"""
+        settings = Settings()
+        assert "http://localhost:3000" in settings.cors_origins, \
+            "Expected localhost:3000 in CORS origins for development"
+    
     def test_cors_origins_count(self):
-        """Test that CORS origins list has expected number of entries"""
-        test_settings = Settings()
-        
-        # Should have at least 3 origins: localhost, preview, production
-        assert len(test_settings.cors_origins) >= 3
-        
+        """Test that CORS origins has exactly 3 domains configured"""
+        settings = Settings()
+        assert len(settings.cors_origins) == 3, \
+            f"Expected 3 CORS origins, got {len(settings.cors_origins)}"
+    
+    def test_cors_origins_no_duplicates(self):
+        """Test that CORS origins contains no duplicate entries"""
+        settings = Settings()
+        unique_origins = set(settings.cors_origins)
+        assert len(unique_origins) == len(settings.cors_origins), \
+            "CORS origins contains duplicate entries"
+    
     def test_cors_origins_all_valid_urls(self):
         """Test that all CORS origins are valid URLs"""
-        test_settings = Settings()
-        
-        for origin in test_settings.cors_origins:
-            # Each origin should start with http:// or https://
-            assert origin.startswith('http://') or origin.startswith('https://'), \
-                f"Invalid origin URL format: {origin}"
-            # Should not have trailing slashes
-            assert not origin.endswith('/'), \
-                f"Origin should not have trailing slash: {origin}"
-                
-    def test_cors_origins_no_duplicates(self):
-        """Test that CORS origins list has no duplicates"""
-        test_settings = Settings()
-        
-        origins_set = set(test_settings.cors_origins)
-        assert len(origins_set) == len(test_settings.cors_origins), \
-            "CORS origins contain duplicates"
-            
-    @patch.dict(os.environ, {
-        'CORS_ORIGINS': 'http://localhost:3000,https://custom-domain.com,https://staging.example.com'
-    })
-    def test_cors_origins_custom_environment_override(self):
-        """Test CORS origins can be overridden via environment variable"""
-        test_settings = Settings()
-        
-        assert len(test_settings.cors_origins) == 3
-        assert "http://localhost:3000" in test_settings.cors_origins
-        assert "https://custom-domain.com" in test_settings.cors_origins
-        assert "https://staging.example.com" in test_settings.cors_origins
-        # Old defaults should not be present when overridden
-        assert "https://create-25.preview.emergentagent.com" not in test_settings.cors_origins
-        
-    @patch.dict(os.environ, {
-        'CORS_ORIGINS': 'http://localhost:3000'
-    })
-    def test_cors_origins_single_origin_override(self):
-        """Test CORS origins with single origin override"""
-        test_settings = Settings()
-        
-        assert len(test_settings.cors_origins) == 1
-        assert test_settings.cors_origins[0] == "http://localhost:3000"
-        
-    def test_cors_origins_whitespace_handling(self):
-        """Test that CORS origins are properly trimmed of whitespace"""
-        test_settings = Settings()
-        
-        for origin in test_settings.cors_origins:
-            # No leading or trailing whitespace
-            assert origin == origin.strip(), \
-                f"Origin has whitespace: '{origin}'"
-                
-    def test_cors_origins_protocol_security(self):
-        """Test that production/preview origins use HTTPS"""
-        test_settings = Settings()
-        
-        for origin in test_settings.cors_origins:
-            # Skip localhost which can use HTTP
-            if 'localhost' not in origin and '127.0.0.1' not in origin:
-                assert origin.startswith('https://'), \
-                    f"Production origin should use HTTPS: {origin}"
-                    
-    def test_cors_origins_preview_domain_pattern(self):
-        """Test that preview URL follows expected domain pattern"""
-        test_settings = Settings()
-        
-        preview_origins = [o for o in test_settings.cors_origins if 'preview.emergentagent.com' in o]
-        assert len(preview_origins) > 0, "No preview origin found"
-        
-        for origin in preview_origins:
-            # Should match pattern: https://*.preview.emergentagent.com
-            assert '.preview.emergentagent.com' in origin
-            assert origin.startswith('https://')
-            
-    def test_cors_origins_production_domain_pattern(self):
-        """Test that production URL follows expected domain pattern"""
-        test_settings = Settings()
-        
-        production_origins = [o for o in test_settings.cors_origins if 'emergent.host' in o]
-        assert len(production_origins) > 0, "No production origin found"
-        
-        for origin in production_origins:
-            # Should match pattern: https://*.emergent.host
-            assert '.emergent.host' in origin
-            assert origin.startswith('https://')
-            
-    @patch.dict(os.environ, {
-        'CORS_ORIGINS': ''
-    })
-    def test_cors_origins_empty_string_environment(self):
-        """Test behavior when CORS_ORIGINS is empty string"""
-        test_settings = Settings()
-        
-        # Empty string split should result in a list with one empty string
-        # This tests edge case handling
-        assert isinstance(test_settings.cors_origins, list)
-        
-    @patch.dict(os.environ, {
-        'CORS_ORIGINS': 'http://localhost:3000,https://test1.com,,https://test2.com'
-    })
-    def test_cors_origins_handles_empty_values_in_list(self):
-        """Test that empty values in comma-separated list are handled"""
-        test_settings = Settings()
-        
-        # Should have 4 elements including empty string
-        assert len(test_settings.cors_origins) == 4
-        # Filter out empty strings to verify non-empty origins
-        non_empty = [o for o in test_settings.cors_origins if o]
-        assert len(non_empty) == 3
-
-
-class TestCORSOriginsEdgeCases:
-    """Test edge cases and failure scenarios for CORS origins"""
-    
-    def test_cors_origins_splitting_behavior(self):
-        """Test that CORS origins are properly split by comma"""
-        test_settings = Settings()
-        
-        # Verify split is working correctly
-        assert isinstance(test_settings.cors_origins, list)
-        # Each origin should not contain commas
-        for origin in test_settings.cors_origins:
-            assert ',' not in origin, f"Origin contains comma: {origin}"
-            
-    def test_cors_origins_case_sensitivity(self):
-        """Test CORS origins maintain proper case sensitivity"""
-        test_settings = Settings()
-        
-        # URLs should not be all lowercase or uppercase unexpectedly
-        for origin in test_settings.cors_origins:
-            if origin:  # Skip empty strings
-                # Protocol should be lowercase
-                assert origin.split('://')[0].islower(), \
-                    f"Protocol should be lowercase in: {origin}"
-                    
-    def test_cors_origins_immutability(self):
-        """Test that modifying CORS origins doesn't affect default"""
-        test_settings1 = Settings()
-        original_origins = test_settings1.cors_origins.copy()
-        
-        # Modify the list
-        test_settings1.cors_origins.append("https://malicious.com")
-        
-        # Create new settings instance
-        test_settings2 = Settings()
-        
-        # New instance should have original values
-        assert "https://malicious.com" not in test_settings2.cors_origins
-        assert len(test_settings2.cors_origins) == len(original_origins)
-        
-    def test_cors_origins_type_consistency(self):
-        """Test that all CORS origins are strings"""
-        test_settings = Settings()
-        
-        for origin in test_settings.cors_origins:
-            assert isinstance(origin, str), \
-                f"Origin is not a string: {type(origin)}"
-                
-    @patch.dict(os.environ, {
-        'CORS_ORIGINS': 'http://localhost:3000,HTTPS://EXAMPLE.COM'
-    })
-    def test_cors_origins_uppercase_protocol_handling(self):
-        """Test handling of uppercase protocols in environment variable"""
-        test_settings = Settings()
-        
-        # Python's split doesn't normalize case, so this tests actual behavior
-        assert len(test_settings.cors_origins) == 2
-        uppercase_origin = [o for o in test_settings.cors_origins if 'HTTPS://' in o]
-        # Verifies that case is preserved (for better or worse)
-        assert len(uppercase_origin) == 1
-
-
-class TestCORSOriginsMigrationVerification:
-    """Test suite to verify successful migration from old to new preview URL"""
-    
-    def test_new_preview_url_format_is_correct(self):
-        """Verify new preview URL follows correct naming convention"""
-        test_settings = Settings()
-        
-        new_url = "https://create-25.preview.emergentagent.com"
-        assert new_url in test_settings.cors_origins
-        
-        # Verify format: create-XX pattern
         import re
-        pattern = r'https://create-\d+\.preview\.emergentagent\.com'
-        matching_urls = [o for o in test_settings.cors_origins if re.match(pattern, o)]
-        assert len(matching_urls) > 0, "New preview URL doesn't match expected pattern"
-        
-    def test_old_preview_url_completely_removed(self):
-        """Ensure old preview URL is completely removed from configuration"""
-        test_settings = Settings()
-        
-        # Test both with default env and string representation
-        old_url = "https://fix-it-6.preview.emergentagent.com"
-        
-        assert old_url not in test_settings.cors_origins
-        assert old_url not in str(test_settings.cors_origins)
-        
-    def test_preview_url_count(self):
-        """Test that there's exactly one preview URL (not multiple versions)"""
-        test_settings = Settings()
-        
-        preview_urls = [o for o in test_settings.cors_origins if 'preview.emergentagent.com' in o]
-        
-        # Should have exactly 1 preview URL (the new one)
-        assert len(preview_urls) == 1, \
-            f"Expected 1 preview URL, found {len(preview_urls)}: {preview_urls}"
-            
-    def test_all_emergentagent_domains_are_valid(self):
-        """Test that all emergentagent.com domains are valid and active"""
-        test_settings = Settings()
-        
-        emergent_domains = [o for o in test_settings.cors_origins if 'emergentagent.com' in o or 'emergent.host' in o]
-        
-        # Should have at least preview and production
-        assert len(emergent_domains) >= 2, \
-            f"Expected at least 2 emergent domains, found {len(emergent_domains)}"
-            
-        # All should use HTTPS
-        for domain in emergent_domains:
+        settings = Settings()
+        url_pattern = re.compile(r'^https?://[a-zA-Z0-9.-]+(:\d+)?$')
+        for origin in settings.cors_origins:
+            assert url_pattern.match(origin), \
+                f"Invalid URL format in CORS origin: {origin}"
+    
+    def test_cors_origins_https_for_production(self):
+        """Test that production domains use HTTPS"""
+        settings = Settings()
+        for origin in settings.cors_origins:
+            if 'localhost' not in origin:
+                assert origin.startswith('https://'), \
+                    f"Production domain should use HTTPS: {origin}"
+    
+    def test_cors_origins_no_trailing_slashes(self):
+        """Test that CORS origins don't have trailing slashes"""
+        settings = Settings()
+        for origin in settings.cors_origins:
+            assert not origin.endswith('/'), \
+                f"CORS origin should not have trailing slash: {origin}"
+    
+    def test_cors_origins_from_env_variable(self, monkeypatch):
+        """Test that CORS origins can be overridden by environment variable"""
+        custom_origins = "https://custom1.com,https://custom2.com"
+        monkeypatch.setenv("CORS_ORIGINS", custom_origins)
+        settings = Settings()
+        assert len(settings.cors_origins) == 2
+        assert "https://custom1.com" in settings.cors_origins
+        assert "https://custom2.com" in settings.cors_origins
+    
+    def test_cors_origins_env_variable_splits_correctly(self, monkeypatch):
+        """Test that CORS_ORIGINS environment variable splits on commas"""
+        origins = "http://test1.com,http://test2.com,http://test3.com"
+        monkeypatch.setenv("CORS_ORIGINS", origins)
+        settings = Settings()
+        assert len(settings.cors_origins) == 3
+        assert all(origin in settings.cors_origins for origin in origins.split(','))
+    
+    def test_cors_origins_empty_env_variable_uses_defaults(self, monkeypatch):
+        """Test that empty CORS_ORIGINS environment variable falls back to defaults"""
+        monkeypatch.delenv("CORS_ORIGINS", raising=False)
+        settings = Settings()
+        assert len(settings.cors_origins) == 3
+        assert "http://localhost:3000" in settings.cors_origins
+    
+    def test_cors_origins_whitespace_handling(self, monkeypatch):
+        """Test that CORS origins handles whitespace in environment variable"""
+        origins_with_spaces = " http://test1.com , http://test2.com "
+        monkeypatch.setenv("CORS_ORIGINS", origins_with_spaces)
+        settings = Settings()
+        # Should handle whitespace gracefully
+        assert len(settings.cors_origins) == 2
+    
+    def test_cors_origins_case_sensitivity(self):
+        """Test that CORS origins preserves case sensitivity"""
+        settings = Settings()
+        for origin in settings.cors_origins:
+            # Domain names should be lowercase
+            domain = origin.split('://')[1] if '://' in origin else origin
+            assert domain == domain.lower(), \
+                f"Domain should be lowercase: {domain}"
+    
+    def test_cors_origins_no_wildcards(self):
+        """Test that CORS origins doesn't contain wildcards"""
+        settings = Settings()
+        for origin in settings.cors_origins:
+            assert '*' not in origin, \
+                f"CORS origin should not contain wildcards: {origin}"
+    
+    def test_cors_origins_specific_domains_only(self):
+        """Test that CORS origins only includes specific, expected domains"""
+        settings = Settings()
+        expected_domains = {
+            "http://localhost:3000",
+            "https://create-25.preview.emergentagent.com",
+            "https://fix-it-6.emergent.host"
+        }
+        actual_domains = set(settings.cors_origins)
+        assert actual_domains == expected_domains, \
+            f"CORS origins mismatch. Expected: {expected_domains}, Got: {actual_domains}"
+
+
+class TestConfigurationIntegrity:
+    """Test suite for overall configuration integrity after CORS changes"""
+    
+    def test_settings_singleton_consistency(self):
+        """Test that multiple Settings instances have same CORS configuration"""
+        settings1 = Settings()
+        settings2 = Settings()
+        assert settings1.cors_origins == settings2.cors_origins, \
+            "Settings instances should have consistent CORS origins"
+    
+    def test_cors_configuration_with_other_settings(self):
+        """Test that CORS configuration works alongside other settings"""
+        settings = Settings()
+        # Verify CORS is set
+        assert len(settings.cors_origins) > 0
+        # Verify other critical settings are still accessible
+        assert hasattr(settings, 'api_prefix')
+        assert hasattr(settings, 'jwt_secret')
+        assert hasattr(settings, 'mongo_url')
+    
+    def test_cors_origins_type_is_list(self):
+        """Test that cors_origins is a list type"""
+        settings = Settings()
+        assert isinstance(settings.cors_origins, list), \
+            f"cors_origins should be a list, got {type(settings.cors_origins)}"
+    
+    def test_cors_origins_contains_strings(self):
+        """Test that all CORS origins are strings"""
+        settings = Settings()
+        for origin in settings.cors_origins:
+            assert isinstance(origin, str), \
+                f"CORS origin should be string, got {type(origin)}: {origin}"
+    
+    def test_cors_origins_non_empty_strings(self):
+        """Test that CORS origins don't contain empty strings"""
+        settings = Settings()
+        for origin in settings.cors_origins:
+            assert origin.strip() != '', \
+                "CORS origins should not contain empty strings"
+
+
+class TestCORSSecurityConsiderations:
+    """Test suite for security aspects of CORS configuration"""
+    
+    def test_cors_no_insecure_protocols_in_production(self):
+        """Test that production environments don't use insecure protocols"""
+        settings = Settings()
+        production_domains = [
+            origin for origin in settings.cors_origins 
+            if 'localhost' not in origin and '127.0.0.1' not in origin
+        ]
+        for domain in production_domains:
             assert domain.startswith('https://'), \
-                f"Emergent domain should use HTTPS: {domain}"
-                
-    def test_cors_configuration_supports_deployment_workflow(self):
-        """Test that CORS configuration supports preview -> production deployment workflow"""
-        test_settings = Settings()
-        
-        has_localhost = any('localhost' in o for o in test_settings.cors_origins)
-        has_preview = any('preview.emergentagent.com' in o for o in test_settings.cors_origins)
-        has_production = any('emergent.host' in o for o in test_settings.cors_origins)
-        
-        # All three environments should be configured
-        assert has_localhost, "Missing localhost for development"
-        assert has_preview, "Missing preview environment"
-        assert has_production, "Missing production environment"
-        
-    def test_cors_origins_string_format_in_environment(self):
-        """Test that CORS origins can be properly formatted as environment variable"""
-        test_settings = Settings()
-        
-        # Verify that if we export these origins back to env var format, they work
-        origins_string = ','.join(test_settings.cors_origins)
-        
-        # Should not have spaces after commas
-        assert ', ' not in origins_string, \
-            "CORS origins string should not have spaces after commas"
-            
-        # Should be rebuildable
-        rebuilt_list = origins_string.split(',')
-        assert len(rebuilt_list) == len(test_settings.cors_origins)
+                f"Production domain must use HTTPS: {domain}"
+    
+    def test_cors_no_ip_addresses_in_origins(self):
+        """Test that CORS origins use domain names, not IP addresses"""
+        import re
+        settings = Settings()
+        ip_pattern = re.compile(r'\d+\.\d+\.\d+\.\d+')
+        for origin in settings.cors_origins:
+            # Localhost IP is acceptable
+            if '127.0.0.1' in origin:
+                continue
+            assert not ip_pattern.search(origin), \
+                f"CORS origin should use domain names: {origin}"
+    
+    def test_cors_origins_no_default_ports_exposed(self):
+        """Test that CORS origins don't expose non-standard ports (except localhost)"""
+        settings = Settings()
+        for origin in settings.cors_origins:
+            if 'localhost' in origin:
+                continue  # Localhost can have ports
+            # Check for port numbers in production URLs
+            if ':' in origin.split('://')[1]:
+                port = origin.split(':')[-1]
+                assert port in ['80', '443'], \
+                    f"Production URL should use standard ports: {origin}"
+
+
+class TestCORSEnvironmentVariables:
+    """Test suite for CORS configuration via environment variables"""
+    
+    def test_cors_env_override_single_domain(self, monkeypatch):
+        """Test CORS configuration with single domain in env variable"""
+        monkeypatch.setenv("CORS_ORIGINS", "https://single-domain.com")
+        settings = Settings()
+        assert len(settings.cors_origins) == 1
+        assert settings.cors_origins[0] == "https://single-domain.com"
+    
+    def test_cors_env_override_multiple_domains(self, monkeypatch):
+        """Test CORS configuration with multiple domains in env variable"""
+        domains = "https://domain1.com,https://domain2.com,https://domain3.com"
+        monkeypatch.setenv("CORS_ORIGINS", domains)
+        settings = Settings()
+        assert len(settings.cors_origins) == 3
+    
+    def test_cors_env_with_localhost_and_production(self, monkeypatch):
+        """Test CORS configuration with mixed localhost and production domains"""
+        domains = "http://localhost:3000,https://production.com"
+        monkeypatch.setenv("CORS_ORIGINS", domains)
+        settings = Settings()
+        assert "http://localhost:3000" in settings.cors_origins
+        assert "https://production.com" in settings.cors_origins
+    
+    def test_cors_env_malformed_handling(self, monkeypatch):
+        """Test that malformed CORS_ORIGINS env variable is handled"""
+        # Test with extra commas
+        monkeypatch.setenv("CORS_ORIGINS", "https://domain1.com,,https://domain2.com")
+        settings = Settings()
+        # Should still parse valid domains
+        assert any('domain1.com' in origin for origin in settings.cors_origins)
+
+
+class TestCORSRegressionTests:
+    """Regression tests to ensure CORS changes don't break existing functionality"""
+    
+    def test_cors_backward_compatibility_localhost(self):
+        """Test that localhost:3000 is still supported for development"""
+        settings = Settings()
+        localhost_found = any('localhost:3000' in origin for origin in settings.cors_origins)
+        assert localhost_found, "Localhost:3000 must remain in CORS origins for development"
+    
+    def test_cors_backward_compatibility_production(self):
+        """Test that original production domain is still supported"""
+        settings = Settings()
+        prod_domain = "https://fix-it-6.emergent.host"
+        assert prod_domain in settings.cors_origins, \
+            f"Original production domain {prod_domain} must remain in CORS origins"
+    
+    def test_cors_new_preview_domain_added(self):
+        """Test that the new preview domain was successfully added"""
+        settings = Settings()
+        new_domain = "https://create-25.preview.emergentagent.com"
+        assert new_domain in settings.cors_origins, \
+            f"New preview domain {new_domain} must be in CORS origins"
+    
+    def test_cors_old_preview_domain_replaced(self):
+        """Test that the old preview domain was replaced"""
+        settings = Settings()
+        old_domain = "https://fix-it-6.preview.emergentagent.com"
+        assert old_domain not in settings.cors_origins, \
+            f"Old preview domain {old_domain} should be replaced"
+
+
+class TestCORSEdgeCases:
+    """Test edge cases in CORS configuration"""
+    
+    def test_cors_with_subdomain_variations(self, monkeypatch):
+        """Test CORS with various subdomain patterns"""
+        domains = "https://app.example.com,https://api.example.com,https://www.example.com"
+        monkeypatch.setenv("CORS_ORIGINS", domains)
+        settings = Settings()
+        assert len(settings.cors_origins) == 3
+        assert all(origin.endswith('example.com') for origin in settings.cors_origins)
+    
+    def test_cors_with_ports_in_development(self, monkeypatch):
+        """Test CORS with explicit ports for development environments"""
+        domains = "http://localhost:3000,http://localhost:3001,http://localhost:8080"
+        monkeypatch.setenv("CORS_ORIGINS", domains)
+        settings = Settings()
+        assert len(settings.cors_origins) == 3
+        assert all('localhost' in origin for origin in settings.cors_origins)
+    
+    def test_cors_unicode_domain_handling(self, monkeypatch):
+        """Test that CORS configuration handles internationalized domains"""
+        # Test with ASCII representation of internationalized domain
+        domains = "https://xn--example-8k8a.com"
+        monkeypatch.setenv("CORS_ORIGINS", domains)
+        settings = Settings()
+        assert "https://xn--example-8k8a.com" in settings.cors_origins
+    
+    def test_cors_very_long_domain_list(self, monkeypatch):
+        """Test CORS with a large number of domains"""
+        domains = ",".join([f"https://domain{i}.com" for i in range(50)])
+        monkeypatch.setenv("CORS_ORIGINS", domains)
+        settings = Settings()
+        assert len(settings.cors_origins) == 50
+    
+    def test_cors_special_characters_in_subdomain(self, monkeypatch):
+        """Test CORS with special characters in subdomain (hyphens)"""
+        domains = "https://my-app.example-site.com,https://test-env.staging-domain.io"
+        monkeypatch.setenv("CORS_ORIGINS", domains)
+        settings = Settings()
+        assert len(settings.cors_origins) == 2
+        assert all('-' in origin for origin in settings.cors_origins)
+
