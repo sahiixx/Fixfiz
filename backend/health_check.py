@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from typing import Dict, Any
 import psutil
 import logging
-from database import get_database, client
+from database import get_database, db
 
 logger = logging.getLogger(__name__)
 
