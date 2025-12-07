@@ -100,6 +100,28 @@ app.add_middleware(
 from fastapi.middleware.gzip import GZipMiddleware
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
+# Add Request ID tracking middleware
+if OPTIMIZATIONS_ENABLED:
+    try:
+        app.add_middleware(RequestIDMiddleware)
+        logger.info("✅ Request ID tracking enabled")
+    except Exception as e:
+        logger.warning(f"Failed to add Request ID middleware: {e}")
+
+# Add Rate Limiting middleware
+if OPTIMIZATIONS_ENABLED:
+    try:
+        app.add_middleware(
+            RateLimitMiddleware,
+            enabled=True,
+            requests_per_minute=60,
+            requests_per_hour=1000,
+            exempt_paths=["/api/health", "/docs", "/openapi.json", "/redoc"]
+        )
+        logger.info("✅ Rate limiting enabled (60/min, 1000/hour)")
+    except Exception as e:
+        logger.warning(f"Failed to add Rate Limiting middleware: {e}")
+
 # Analytics middleware
 class AnalyticsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
