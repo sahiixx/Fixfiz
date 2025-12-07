@@ -137,7 +137,11 @@ class TestSettingsConfiguration:
         assert len(settings.cors_origins) > 0
     
     def test_api_settings_configuration(self):
-        """Test that API settings are properly configured"""
+        """
+        Verify that the Settings object exposes API-related configuration attributes.
+        
+        Asserts that a Settings instance has a `cors_origins` attribute.
+        """
         settings = Settings()
         
         # Check for API-related settings if they exist

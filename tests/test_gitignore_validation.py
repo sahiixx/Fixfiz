@@ -15,18 +15,39 @@ class TestGitignoreFile:
     
     @pytest.fixture
     def gitignore_path(self):
-        """Get path to .gitignore file"""
+        """
+        Return the filesystem path to the repository root .gitignore file.
+        
+        Returns:
+            Path: Path object pointing to the repository's top-level '.gitignore' file.
+        """
         return Path(__file__).parent.parent / '.gitignore'
     
     @pytest.fixture
     def gitignore_content(self, gitignore_path):
-        """Read .gitignore file content"""
+        """
+        Read and return the full text of the .gitignore file at the given path.
+        
+        Parameters:
+            gitignore_path (str | Path): Path to the .gitignore file to read.
+        
+        Returns:
+            str: The complete contents of the file as a single string.
+        """
         with open(gitignore_path, 'r') as f:
             return f.read()
     
     @pytest.fixture
     def gitignore_lines(self, gitignore_content):
-        """Get non-empty, non-comment lines from .gitignore"""
+        """
+        Extracts the non-empty, non-comment lines from the contents of a .gitignore file.
+        
+        Parameters:
+            gitignore_content (str): Full text content of a .gitignore file.
+        
+        Returns:
+            list[str]: A list of lines from `gitignore_content` that are not blank and do not start with `#`, with surrounding whitespace removed.
+        """
         lines = []
         for line in gitignore_content.split('\n'):
             stripped = line.strip()
@@ -49,7 +70,11 @@ class TestGitignoreFile:
             pytest.fail(f"Failed to read .gitignore: {e}")
     
     def test_environment_files_ignored(self, gitignore_lines):
-        """Test that environment files are properly ignored"""
+        """
+        Ensure the repository .gitignore contains patterns that ignore environment files.
+        
+        Checks that the patterns '*.env' and '*.env.*' appear in the non-comment, non-empty lines provided by the `gitignore_lines` fixture.
+        """
         env_patterns = [
             '*.env',
             '*.env.*'
@@ -65,7 +90,14 @@ class TestGitignoreFile:
             assert line.strip() != '-e', f"Found invalid '-e' entry at line {i}"
     
     def test_no_duplicate_patterns(self, gitignore_lines):
-        """Test that there are no duplicate ignore patterns"""
+        """
+        Detect duplicate ignore patterns in the repository .gitignore and report them for cleanup.
+        
+        This test scans the provided `gitignore_lines` for repeated entries and prints a warning listing any duplicates found; it does not fail the test when duplicates are present.
+        
+        Parameters:
+        	gitignore_lines (list[str]): Non-empty, non-comment lines extracted from the .gitignore file.
+        """
         seen = set()
         duplicates = []
         
@@ -94,7 +126,15 @@ class TestGitignoreFile:
             assert found, f"Common pattern '{pattern}' should be ignored"
     
     def test_sensitive_files_ignored(self, gitignore_lines):
-        """Test that sensitive files are properly ignored"""
+        """
+        Verify that common sensitive file patterns are present in the repository's .gitignore.
+        
+        Parameters:
+            gitignore_lines (list[str]): Non-empty, non-comment lines extracted from the .gitignore file.
+        
+        Raises:
+            AssertionError: If any required sensitive pattern ('*.env', '*.env.*', '*.pem', '*.key') is not found.
+        """
         sensitive_patterns = [
             '*.env',
             '*.env.*',
@@ -107,7 +147,11 @@ class TestGitignoreFile:
             assert len(matches) > 0, f"Sensitive pattern '{pattern}' should be in .gitignore"
     
     def test_env_file_variations_covered(self, gitignore_lines):
-        """Test that various environment file formats are covered"""
+        """
+        Ensure the .gitignore contains a wildcard pattern that covers .env file variations.
+        
+        Asserts that the literal pattern '*.env.*' appears in the list of non-comment .gitignore lines, covering filenames such as '.env.local' and '.env.production'.
+        """
         # Test that pattern covers: .env, .env.local, .env.production, etc.
         env_pattern = '*.env.*'
         assert env_pattern in gitignore_lines, "Should have wildcard pattern for .env variations"
@@ -128,13 +172,25 @@ class TestGitignoreFile:
             pytest.fail(".gitignore should be UTF-8 encoded")
     
     def test_no_absolute_paths(self, gitignore_lines):
-        """Test that .gitignore doesn't contain absolute paths"""
+        """
+        Ensure .gitignore contains no absolute filesystem paths.
+        
+        Checks that no non-comment, non-empty line begins with common absolute prefixes such as '/home' or 'C:'.
+        """
         for line in gitignore_lines:
             assert not line.startswith('/home'), f"Should not contain absolute paths: {line}"
             assert not line.startswith('C:'), f"Should not contain Windows absolute paths: {line}"
     
     def test_comments_properly_formatted(self, gitignore_content):
-        """Test that comment lines are properly formatted"""
+        """
+        Check that every comment line in the .gitignore is either a standalone '#' or has a space (or other whitespace) immediately after the '#'.
+        
+        Parameters:
+            gitignore_content (str): Full text content of the .gitignore file.
+        
+        Raises:
+            AssertionError: If a comment line does not follow the formatting rule; the failure message includes the offending line number and the line content.
+        """
         lines = gitignore_content.split('\n')
         for i, line in enumerate(lines, 1):
             if line.strip().startswith('#'):
@@ -203,7 +259,11 @@ class TestGitignoreIntegration:
             ".env.example should not match *.env pattern"
     
     def test_critical_patterns_for_security(self):
-        """Test that security-critical files are ignored"""
+        """
+        Verify that common security-sensitive filenames are covered by .gitignore patterns.
+        
+        Asserts each filename is either ending with `.env`, containing `.env.`, ending with `.key`, or ending with `.pem`.
+        """
         critical_files = [
             '.env',
             '.env.local',
@@ -228,7 +288,11 @@ class TestGitignoreCleanup:
     """Tests to identify cleanup needed in .gitignore"""
     
     def test_document_duplicate_entries(self, tmpdir):
-        """Document any duplicate entries found in .gitignore"""
+        """
+        Document duplicate ignore patterns in the repository .gitignore by printing each duplicate pattern and its line numbers.
+        
+        Scans the repository root .gitignore for non-empty, non-comment lines and, when duplicates are found, prints a summary showing each duplicated pattern and the list of line numbers where it appears. This test always passes and exists to surface duplicate entries for manual cleanup.
+        """
         gitignore_path = Path(__file__).parent.parent / '.gitignore'
         
         with open(gitignore_path, 'r') as f:
@@ -254,7 +318,11 @@ class TestGitignoreCleanup:
         assert True, "Documented duplicate entries for cleanup"
     
     def test_identify_malformed_entries(self):
-        """Identify any malformed entries in .gitignore"""
+        """
+        Scan the repository .gitignore for common malformed entries and document any findings.
+        
+        Checks for exact matches of known malformed tokens ('-e', '-E', '\\n') and prints their line numbers and content if found; the test records issues for cleanup but does not fail.
+        """
         gitignore_path = Path(__file__).parent.parent / '.gitignore'
         
         with open(gitignore_path, 'r') as f:
