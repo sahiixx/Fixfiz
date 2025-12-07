@@ -189,6 +189,30 @@ async def health_check(detailed: bool = False):
     # Fallback to basic health check
     return {"status": "healthy", "timestamp": datetime.utcnow(), "service": "nowhere-digital-api"}
 
+@api_router.get("/metrics")
+async def get_metrics_endpoint():
+    """
+    Get application metrics
+    
+    Returns:
+        Application performance metrics
+    """
+    try:
+        from metrics_collector import get_metrics
+        metrics = get_metrics()
+        return StandardResponse(
+            success=True,
+            message="Metrics retrieved successfully",
+            data=metrics
+        )
+    except Exception as e:
+        logger.error(f"Error getting metrics: {e}")
+        return StandardResponse(
+            success=False,
+            message="Failed to get metrics",
+            data={"error": str(e)}
+        )
+
 # Contact Form Endpoints
 @api_router.post("/contact", response_model=StandardResponse)
 async def create_contact_form(
