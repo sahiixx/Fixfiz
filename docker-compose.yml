@@ -1,0 +1,137 @@
+# ================================================================================================
+# NOWHERE.AI Platform - Docker Compose Configuration
+# ================================================================================================
+# Complete stack: MongoDB, Backend, Frontend
+
+version: '3.8'
+
+services:
+  # ==============================================================================================
+  # MongoDB Database
+  # ==============================================================================================
+  mongodb:
+    image: mongo:6.0
+    container_name: nowhere-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-admin}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-changeme}
+      MONGO_INITDB_DATABASE: ${DATABASE_NAME:-nowhereai}
+    ports:
+      - "${MONGO_PORT:-27017}:27017"
+    volumes:
+      - mongodb_data:/data/db
+      - mongodb_config:/data/configdb
+      - ./backups:/backups
+    networks:
+      - nowhere-network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ==============================================================================================
+  # Backend API
+  # ==============================================================================================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nowhere-backend
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    environment:
+      # Environment
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+      DEBUG: ${DEBUG:-false}
+      
+      # Database
+      MONGO_URL: mongodb://${MONGO_ROOT_USERNAME:-admin}:${MONGO_ROOT_PASSWORD:-changeme}@mongodb:27017
+      DATABASE_NAME: ${DATABASE_NAME:-nowhereai}
+      
+      # Security
+      JWT_SECRET: ${JWT_SECRET:-change-this-secret-key}
+      JWT_ALGORITHM: HS256
+      JWT_EXPIRY_HOURS: 24
+      
+      # CORS
+      CORS_ORIGINS: ${CORS_ORIGINS:-["http://localhost:3000"]}
+      
+      # API Keys (Optional)
+      EMERGENT_LLM_KEY: ${EMERGENT_LLM_KEY:-}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      TWILIO_ACCOUNT_SID: ${TWILIO_ACCOUNT_SID:-}
+      TWILIO_AUTH_TOKEN: ${TWILIO_AUTH_TOKEN:-}
+      SENDGRID_API_KEY: ${SENDGRID_API_KEY:-}
+      
+      # Features
+      FEATURE_AI_ADVANCED: ${FEATURE_AI_ADVANCED:-true}
+      FEATURE_VOICE_AI: ${FEATURE_VOICE_AI:-true}
+      FEATURE_VISION_AI: ${FEATURE_VISION_AI:-true}
+      
+      # Caching
+      CACHE_ENABLED: ${CACHE_ENABLED:-true}
+      CACHE_DEFAULT_TTL: ${CACHE_DEFAULT_TTL:-300}
+      
+      # Rate Limiting
+      RATE_LIMIT_ENABLED: ${RATE_LIMIT_ENABLED:-true}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-60}
+      RATE_LIMIT_PER_HOUR: ${RATE_LIMIT_PER_HOUR:-1000}
+    ports:
+      - "${BACKEND_PORT:-8001}:8001"
+    volumes:
+      - ./backend/logs:/app/logs
+    networks:
+      - nowhere-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ==============================================================================================
+  # Frontend
+  # ==============================================================================================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nowhere-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    environment:
+      REACT_APP_BACKEND_URL: ${REACT_APP_BACKEND_URL:-http://localhost:8001}
+      REACT_APP_ENVIRONMENT: ${ENVIRONMENT:-production}
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    networks:
+      - nowhere-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# ================================================================================================
+# Networks
+# ================================================================================================
+networks:
+  nowhere-network:
+    driver: bridge
+
+# ================================================================================================
+# Volumes
+# ================================================================================================
+volumes:
+  mongodb_data:
+    driver: local
+  mongodb_config:
+    driver: local
