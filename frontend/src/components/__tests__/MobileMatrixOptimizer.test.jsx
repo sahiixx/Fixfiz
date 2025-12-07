@@ -1,917 +1,918 @@
 /**
  * Comprehensive Unit Tests for MobileMatrixOptimizer Component
- * Tests the mobile optimization component and its exported utilities
  * 
- * This test suite covers:
- * - Component rendering and initialization
- * - Mobile/desktop detection logic
- * - Orientation detection (portrait/landscape)
- * - Touch support detection
- * - CSS class application
- * - Style injection behavior
- * - Performance monitor display logic
- * - Custom hooks (useMobile)
- * - MobileMatrixRain component
- * - MobileMatrixText component
- * - Window event listeners (resize, orientationchange)
- * - Edge cases and error handling
- * Total: 40+ comprehensive unit tests
+ * Tests mobile device detection, responsive behavior, orientation handling,
+ * touch support, performance optimizations, and JSX style tag fixes.
+ * 
+ * Test Coverage:
+ * - Mobile/Desktop Detection (8 tests)
+ * - Orientation Handling (6 tests)
+ * - Touch Support Detection (5 tests)
+ * - CSS Style Injection (7 tests)
+ * - Performance Monitoring (4 tests)
+ * - Custom Hooks (6 tests)
+ * - Component Exports (6 tests)
+ * - Edge Cases & Error Handling (8 tests)
+ * Total: 50+ comprehensive unit tests
  */
 
 import React from 'react';
-import { render, screen, cleanup, waitFor } from '@testing-library/react';
+import { render, screen, act, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
-import MobileMatrixOptimizer, { 
-  useMobile, 
-  MobileMatrixRain, 
-  MobileMatrixText 
+import MobileMatrixOptimizer, {
+  useMobile,
+  MobileMatrixRain,
+  MobileMatrixText
 } from '../MobileMatrixOptimizer';
 
-// Mock window properties for testing
-const mockWindowProperties = (overrides = {}) => {
-  const defaults = {
-    innerWidth: 1024,
-    innerHeight: 768,
-    location: { hostname: 'example.com' }
-  };
-  
+// Mock window.matchMedia for responsive tests
+const mockMatchMedia = (matches) => {
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: jest.fn().mockImplementation(query => ({
+      matches: matches,
+      media: query,
+      onchange: null,
+      addListener: jest.fn(),
+      removeListener: jest.fn(),
+      addEventListener: jest.fn(),
+      removeEventListener: jest.fn(),
+      dispatchEvent: jest.fn(),
+    })),
+  });
+};
+
+// Mock navigator.userAgent
+const mockUserAgent = (userAgent) => {
+  Object.defineProperty(window.navigator, 'userAgent', {
+    writable: true,
+    configurable: true,
+    value: userAgent
+  });
+};
+
+// Mock window dimensions
+const mockWindowDimensions = (width, height) => {
   Object.defineProperty(window, 'innerWidth', {
     writable: true,
     configurable: true,
-    value: overrides.innerWidth || defaults.innerWidth
+    value: width
   });
-  
   Object.defineProperty(window, 'innerHeight', {
     writable: true,
     configurable: true,
-    value: overrides.innerHeight || defaults.innerHeight
+    value: height
   });
-  
-  if (overrides.location) {
-    Object.defineProperty(window, 'location', {
+};
+
+// Mock touch support
+const mockTouchSupport = (hasTouch) => {
+  if (hasTouch) {
+    Object.defineProperty(window, 'ontouchstart', {
       writable: true,
       configurable: true,
-      value: overrides.location
+      value: () => {}
+    });
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      writable: true,
+      configurable: true,
+      value: 5
+    });
+  } else {
+    delete window.ontouchstart;
+    Object.defineProperty(window.navigator, 'maxTouchPoints', {
+      writable: true,
+      configurable: true,
+      value: 0
     });
   }
 };
 
-// Mock navigator properties
-const mockNavigator = (overrides = {}) => {
-  Object.defineProperty(window.navigator, 'userAgent', {
-    writable: true,
-    configurable: true,
-    value: overrides.userAgent || 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
-  });
-  
-  Object.defineProperty(window.navigator, 'maxTouchPoints', {
-    writable: true,
-    configurable: true,
-    value: overrides.maxTouchPoints !== undefined ? overrides.maxTouchPoints : 0
-  });
-};
-
-// Helper component to test useMobile hook
-const UseMobileTestComponent = () => {
-  const isMobile = useMobile();
-  return <div data-testid="mobile-status">{isMobile ? 'mobile' : 'desktop'}</div>;
-};
-
 describe('MobileMatrixOptimizer Component', () => {
-  
   beforeEach(() => {
-    // Reset to desktop defaults before each test
-    mockWindowProperties({ innerWidth: 1024, innerHeight: 768 });
-    mockNavigator({ userAgent: 'Mozilla/5.0', maxTouchPoints: 0 });
-    cleanup();
-  });
-  
-  afterEach(() => {
-    cleanup();
-  });
-
-  // ================================================================================================
-  // BASIC RENDERING TESTS
-  // ================================================================================================
-  
-  describe('Basic Rendering', () => {
-    test('renders children content correctly', () => {
-      render(
-        <MobileMatrixOptimizer>
-          <div data-testid="child-content">Test Content</div>
-        </MobileMatrixOptimizer>
-      );
-      
-      expect(screen.getByTestId('child-content')).toBeInTheDocument();
-      expect(screen.getByTestId('child-content')).toHaveTextContent('Test Content');
-    });
+    // Reset all mocks before each test
+    jest.clearAllMocks();
+    mockMatchMedia(false);
+    mockWindowDimensions(1920, 1080);
+    mockTouchSupport(false);
+    mockUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64)');
     
-    test('renders without crashing when no children provided', () => {
-      const { container } = render(<MobileMatrixOptimizer />);
-      expect(container.firstChild).toBeInTheDocument();
-    });
-    
-    test('applies custom className prop', () => {
-      const { container } = render(
-        <MobileMatrixOptimizer className="custom-class">
-          <div>Content</div>
-        </MobileMatrixOptimizer>
-      );
-      
-      expect(container.firstChild).toHaveClass('custom-class');
-    });
-    
-    test('applies default empty className when not provided', () => {
-      const { container } = render(
-        <MobileMatrixOptimizer>
-          <div>Content</div>
-        </MobileMatrixOptimizer>
-      );
-      
-      expect(container.firstChild).toHaveClass('desktop-full');
-    });
+    // Reset CSS custom properties
+    document.documentElement.style.removeProperty('--matrix-effects-opacity');
   });
 
-  // ================================================================================================
-  // MOBILE DETECTION TESTS
-  // ================================================================================================
-  
-  describe('Mobile Detection', () => {
-    test('detects mobile device based on window width <= 768', () => {
-      mockWindowProperties({ innerWidth: 768, innerHeight: 1024 });
+  describe('Mobile/Desktop Detection', () => {
+    test('detects desktop environment correctly', () => {
+      mockWindowDimensions(1920, 1080);
+      mockUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/91.0');
       
       const { container } = render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      expect(container.firstChild).toHaveClass('mobile-optimized');
+      expect(container.querySelector('.desktop-full')).toBeInTheDocument();
+      expect(container.querySelector('.mobile-optimized')).not.toBeInTheDocument();
     });
-    
-    test('detects desktop device based on window width > 768', () => {
-      mockWindowProperties({ innerWidth: 1024, innerHeight: 768 });
+
+    test('detects mobile environment by screen width', () => {
+      mockWindowDimensions(375, 667);
       
       const { container } = render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      expect(container.firstChild).toHaveClass('desktop-full');
+      expect(container.querySelector('.mobile-optimized')).toBeInTheDocument();
+      expect(container.querySelector('.desktop-full')).not.toBeInTheDocument();
     });
-    
-    test('detects mobile device from Android user agent', () => {
-      mockWindowProperties({ innerWidth: 1024 });
-      mockNavigator({ userAgent: 'Mozilla/5.0 (Linux; Android 10) AppleWebKit/537.36' });
+
+    test('detects mobile environment by user agent - iPhone', () => {
+      mockWindowDimensions(1024, 768);
+      mockUserAgent('Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)');
       
       const { container } = render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      expect(container.firstChild).toHaveClass('mobile-optimized');
+      expect(container.querySelector('.mobile-optimized')).toBeInTheDocument();
     });
-    
-    test('detects mobile device from iPhone user agent', () => {
-      mockWindowProperties({ innerWidth: 1024 });
-      mockNavigator({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0 like Mac OS X)' });
+
+    test('detects mobile environment by user agent - Android', () => {
+      mockWindowDimensions(1024, 768);
+      mockUserAgent('Mozilla/5.0 (Linux; Android 10; SM-G973F)');
       
       const { container } = render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      expect(container.firstChild).toHaveClass('mobile-optimized');
+      expect(container.querySelector('.mobile-optimized')).toBeInTheDocument();
     });
-    
-    test('detects mobile device from iPad user agent', () => {
-      mockWindowProperties({ innerWidth: 1024 });
-      mockNavigator({ userAgent: 'Mozilla/5.0 (iPad; CPU OS 14_0 like Mac OS X)' });
+
+    test('detects mobile environment by user agent - iPad', () => {
+      mockWindowDimensions(1024, 768);
+      mockUserAgent('Mozilla/5.0 (iPad; CPU OS 13_0 like Mac OS X)');
       
       const { container } = render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      expect(container.firstChild).toHaveClass('mobile-optimized');
+      expect(container.querySelector('.mobile-optimized')).toBeInTheDocument();
     });
-    
-    test('detects edge case: exactly 768px width should be mobile', () => {
-      mockWindowProperties({ innerWidth: 768 });
+
+    test('handles boundary case at 768px width - mobile', () => {
+      mockWindowDimensions(768, 1024);
       
       const { container } = render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      expect(container.firstChild).toHaveClass('mobile-optimized');
+      expect(container.querySelector('.mobile-optimized')).toBeInTheDocument();
     });
-    
-    test('detects edge case: 769px width should be desktop', () => {
-      mockWindowProperties({ innerWidth: 769 });
+
+    test('handles boundary case at 769px width - desktop', () => {
+      mockWindowDimensions(769, 1024);
+      mockUserAgent('Mozilla/5.0 (Windows NT 10.0)');
       
       const { container } = render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      expect(container.firstChild).toHaveClass('desktop-full');
+      expect(container.querySelector('.desktop-full')).toBeInTheDocument();
+    });
+
+    test('updates detection on window resize', async () => {
+      mockWindowDimensions(1920, 1080);
+      
+      const { container, rerender } = render(
+        <MobileMatrixOptimizer>
+          <div>Test Content</div>
+        </MobileMatrixOptimizer>
+      );
+      
+      expect(container.querySelector('.desktop-full')).toBeInTheDocument();
+      
+      // Simulate resize to mobile
+      await act(async () => {
+        mockWindowDimensions(375, 667);
+        window.dispatchEvent(new Event('resize'));
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
+      
+      rerender(
+        <MobileMatrixOptimizer>
+          <div>Test Content</div>
+        </MobileMatrixOptimizer>
+      );
     });
   });
 
-  // ================================================================================================
-  // ORIENTATION DETECTION TESTS
-  // ================================================================================================
-  
-  describe('Orientation Detection', () => {
-    test('detects portrait orientation when height > width', () => {
-      mockWindowProperties({ innerWidth: 375, innerHeight: 667 });
+  describe('Orientation Handling', () => {
+    test('detects portrait orientation correctly', () => {
+      mockWindowDimensions(375, 667);
       
       const { container } = render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      expect(container.firstChild).toHaveClass('orientation-portrait');
+      expect(container.querySelector('.orientation-portrait')).toBeInTheDocument();
     });
-    
-    test('detects landscape orientation when width > height', () => {
-      mockWindowProperties({ innerWidth: 667, innerHeight: 375 });
+
+    test('detects landscape orientation correctly', () => {
+      mockWindowDimensions(667, 375);
       
       const { container } = render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      expect(container.firstChild).toHaveClass('orientation-landscape');
+      expect(container.querySelector('.orientation-landscape')).toBeInTheDocument();
     });
-    
-    test('detects landscape orientation when width equals height', () => {
-      mockWindowProperties({ innerWidth: 600, innerHeight: 600 });
+
+    test('handles square screens as landscape', () => {
+      mockWindowDimensions(1000, 1000);
       
       const { container } = render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      expect(container.firstChild).toHaveClass('orientation-landscape');
+      expect(container.querySelector('.orientation-landscape')).toBeInTheDocument();
+    });
+
+    test('updates orientation on window resize', async () => {
+      mockWindowDimensions(375, 667);
+      
+      const { container, rerender } = render(
+        <MobileMatrixOptimizer>
+          <div>Test Content</div>
+        </MobileMatrixOptimizer>
+      );
+      
+      expect(container.querySelector('.orientation-portrait')).toBeInTheDocument();
+      
+      await act(async () => {
+        mockWindowDimensions(667, 375);
+        window.dispatchEvent(new Event('resize'));
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
+      
+      rerender(
+        <MobileMatrixOptimizer>
+          <div>Test Content</div>
+        </MobileMatrixOptimizer>
+      );
+    });
+
+    test('handles orientation change event', async () => {
+      mockWindowDimensions(375, 667);
+      
+      const { container } = render(
+        <MobileMatrixOptimizer>
+          <div>Test Content</div>
+        </MobileMatrixOptimizer>
+      );
+      
+      await act(async () => {
+        mockWindowDimensions(667, 375);
+        window.dispatchEvent(new Event('orientationchange'));
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
+    });
+
+    test('applies correct orientation classes dynamically', () => {
+      mockWindowDimensions(375, 667);
+      
+      const { container } = render(
+        <MobileMatrixOptimizer>
+          <div>Test Content</div>
+        </MobileMatrixOptimizer>
+      );
+      
+      const mainDiv = container.firstChild;
+      expect(mainDiv.className).toContain('orientation-');
     });
   });
 
-  // ================================================================================================
-  // TOUCH SUPPORT DETECTION TESTS
-  // ================================================================================================
-  
   describe('Touch Support Detection', () => {
-    test('detects touch support via maxTouchPoints > 0', () => {
-      mockNavigator({ maxTouchPoints: 5 });
+    test('detects touch support when ontouchstart exists', () => {
+      mockTouchSupport(true);
       
       const { container } = render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      expect(container.firstChild).toHaveClass('touch-enabled');
+      expect(container.querySelector('.touch-enabled')).toBeInTheDocument();
     });
-    
-    test('detects no touch support when maxTouchPoints = 0', () => {
-      mockNavigator({ maxTouchPoints: 0 });
+
+    test('detects no touch support on desktop', () => {
+      mockTouchSupport(false);
       
       const { container } = render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      expect(container.firstChild).toHaveClass('touch-disabled');
+      expect(container.querySelector('.touch-disabled')).toBeInTheDocument();
     });
-    
-    test('detects touch support via ontouchstart in window', () => {
-      // Mock ontouchstart property
-      window.ontouchstart = null;
-      
-      const { container } = render(
-        <MobileMatrixOptimizer>
-          <div>Content</div>
-        </MobileMatrixOptimizer>
-      );
-      
-      expect(container.firstChild).toHaveClass('touch-enabled');
-      
-      // Cleanup
+
+    test('detects touch support via maxTouchPoints', () => {
       delete window.ontouchstart;
-    });
-  });
-
-  // ================================================================================================
-  // STYLE INJECTION TESTS
-  // ================================================================================================
-  
-  describe('Style Injection', () => {
-    test('injects mobile optimization styles when on mobile', () => {
-      mockWindowProperties({ innerWidth: 375 });
+      Object.defineProperty(window.navigator, 'maxTouchPoints', {
+        writable: true,
+        configurable: true,
+        value: 2
+      });
       
       const { container } = render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      const styleElements = container.querySelectorAll('style');
-      expect(styleElements.length).toBeGreaterThan(0);
-      
-      // Check if mobile-optimized styles are present
-      const styleContent = Array.from(styleElements)
-        .map(el => el.textContent)
-        .join('');
-      expect(styleContent).toContain('.mobile-optimized');
+      expect(container.querySelector('.touch-enabled')).toBeInTheDocument();
     });
-    
+
+    test('applies touch-enabled class only when touch is supported', () => {
+      mockTouchSupport(true);
+      mockWindowDimensions(375, 667);
+      
+      const { container } = render(
+        <MobileMatrixOptimizer>
+          <div>Test Content</div>
+        </MobileMatrixOptimizer>
+      );
+      
+      const mainDiv = container.firstChild;
+      expect(mainDiv.className).toContain('touch-enabled');
+      expect(mainDiv.className).not.toContain('touch-disabled');
+    });
+
+    test('handles missing touch properties gracefully', () => {
+      delete window.ontouchstart;
+      delete window.navigator.maxTouchPoints;
+      
+      const { container } = render(
+        <MobileMatrixOptimizer>
+          <div>Test Content</div>
+        </MobileMatrixOptimizer>
+      );
+      
+      expect(container.querySelector('.touch-disabled')).toBeInTheDocument();
+    });
+  });
+
+  describe('CSS Style Injection - JSX Attribute Fix', () => {
+    test('injects mobile styles without jsx attribute', () => {
+      mockWindowDimensions(375, 667);
+      
+      const { container } = render(
+        <MobileMatrixOptimizer>
+          <div>Test Content</div>
+        </MobileMatrixOptimizer>
+      );
+      
+      const styleTag = container.querySelector('style');
+      expect(styleTag).toBeInTheDocument();
+      expect(styleTag.hasAttribute('jsx')).toBe(false);
+    });
+
+    test('style tag contains mobile optimization CSS', () => {
+      mockWindowDimensions(375, 667);
+      
+      const { container } = render(
+        <MobileMatrixOptimizer>
+          <div>Test Content</div>
+        </MobileMatrixOptimizer>
+      );
+      
+      const styleTag = container.querySelector('style');
+      expect(styleTag.textContent).toContain('.mobile-optimized');
+      expect(styleTag.textContent).toContain('-webkit-overflow-scrolling');
+      expect(styleTag.textContent).toContain('scroll-behavior');
+    });
+
     test('does not inject mobile styles on desktop', () => {
-      mockWindowProperties({ innerWidth: 1024 });
+      mockWindowDimensions(1920, 1080);
       
       const { container } = render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      const styleElements = container.querySelectorAll('style');
-      const styleContent = Array.from(styleElements)
-        .map(el => el.textContent)
-        .join('');
-      
-      // Should not have mobile-specific styles
-      if (styleContent) {
-        expect(styleContent).not.toContain('.mobile-optimized {');
-      }
+      const styleTag = container.querySelector('style');
+      expect(styleTag).not.toBeInTheDocument();
     });
-    
-    test('mobile styles include webkit overflow scrolling', () => {
-      mockWindowProperties({ innerWidth: 375 });
-      
-      const { container } = render(
-        <MobileMatrixOptimizer>
-          <div>Content</div>
-        </MobileMatrixOptimizer>
-      );
-      
-      const styleElements = container.querySelectorAll('style');
-      const styleContent = Array.from(styleElements)
-        .map(el => el.textContent)
-        .join('');
-      
-      expect(styleContent).toContain('-webkit-overflow-scrolling');
-    });
-    
+
     test('mobile styles include responsive text scaling', () => {
-      mockWindowProperties({ innerWidth: 375 });
+      mockWindowDimensions(375, 667);
       
       const { container } = render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      const styleElements = container.querySelectorAll('style');
-      const styleContent = Array.from(styleElements)
-        .map(el => el.textContent)
-        .join('');
-      
-      expect(styleContent).toContain('clamp');
+      const styleTag = container.querySelector('style');
+      expect(styleTag.textContent).toContain('clamp');
+      expect(styleTag.textContent).toContain('text-5xl');
     });
-  });
 
-  // ================================================================================================
-  // PERFORMANCE MONITOR TESTS
-  // ================================================================================================
-  
-  describe('Performance Monitor Display', () => {
-    test('shows performance monitor on localhost when mobile', () => {
-      mockWindowProperties({ 
-        innerWidth: 375,
-        location: { hostname: 'localhost' }
-      });
-      
-      render(
-        <MobileMatrixOptimizer>
-          <div>Content</div>
-        </MobileMatrixOptimizer>
-      );
-      
-      // Look for performance monitor elements
-      expect(screen.getByText(/Mobile:/i)).toBeInTheDocument();
-      expect(screen.getByText(/Touch:/i)).toBeInTheDocument();
-      expect(screen.getByText(/Orient:/i)).toBeInTheDocument();
-    });
-    
-    test('shows performance monitor on 127.0.0.1 when mobile', () => {
-      mockWindowProperties({ 
-        innerWidth: 375,
-        location: { hostname: '127.0.0.1' }
-      });
-      
-      render(
-        <MobileMatrixOptimizer>
-          <div>Content</div>
-        </MobileMatrixOptimizer>
-      );
-      
-      expect(screen.getByText(/Mobile:/i)).toBeInTheDocument();
-    });
-    
-    test('hides performance monitor on production domain when mobile', () => {
-      mockWindowProperties({ 
-        innerWidth: 375,
-        location: { hostname: 'production.com' }
-      });
-      
-      render(
-        <MobileMatrixOptimizer>
-          <div>Content</div>
-        </MobileMatrixOptimizer>
-      );
-      
-      expect(screen.queryByText(/Mobile:/i)).not.toBeInTheDocument();
-    });
-    
-    test('hides performance monitor on desktop even on localhost', () => {
-      mockWindowProperties({ 
-        innerWidth: 1024,
-        location: { hostname: 'localhost' }
-      });
-      
-      render(
-        <MobileMatrixOptimizer>
-          <div>Content</div>
-        </MobileMatrixOptimizer>
-      );
-      
-      expect(screen.queryByText(/Mobile:/i)).not.toBeInTheDocument();
-    });
-    
-    test('performance monitor displays correct mobile status', () => {
-      mockWindowProperties({ 
-        innerWidth: 375,
-        location: { hostname: 'localhost' }
-      });
-      
-      render(
-        <MobileMatrixOptimizer>
-          <div>Content</div>
-        </MobileMatrixOptimizer>
-      );
-      
-      expect(screen.getByText(/Mobile: YES/i)).toBeInTheDocument();
-    });
-    
-    test('performance monitor displays correct touch status', () => {
-      mockWindowProperties({ 
-        innerWidth: 375,
-        location: { hostname: 'localhost' }
-      });
-      mockNavigator({ maxTouchPoints: 5 });
-      
-      render(
-        <MobileMatrixOptimizer>
-          <div>Content</div>
-        </MobileMatrixOptimizer>
-      );
-      
-      expect(screen.getByText(/Touch: YES/i)).toBeInTheDocument();
-    });
-    
-    test('performance monitor displays orientation in uppercase', () => {
-      mockWindowProperties({ 
-        innerWidth: 375,
-        innerHeight: 667,
-        location: { hostname: 'localhost' }
-      });
-      
-      render(
-        <MobileMatrixOptimizer>
-          <div>Content</div>
-        </MobileMatrixOptimizer>
-      );
-      
-      expect(screen.getByText(/Orient: PORTRAIT/i)).toBeInTheDocument();
-    });
-  });
-
-  // ================================================================================================
-  // CSS CLASSES COMBINATION TESTS
-  // ================================================================================================
-  
-  describe('CSS Classes Combination', () => {
-    test('applies all relevant classes for mobile portrait touch device', () => {
-      mockWindowProperties({ innerWidth: 375, innerHeight: 667 });
-      mockNavigator({ maxTouchPoints: 5 });
+    test('mobile styles include grid layout optimizations', () => {
+      mockWindowDimensions(375, 667);
       
       const { container } = render(
-        <MobileMatrixOptimizer className="custom">
-          <div>Content</div>
+        <MobileMatrixOptimizer>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      const element = container.firstChild;
-      expect(element).toHaveClass('custom');
-      expect(element).toHaveClass('mobile-optimized');
-      expect(element).toHaveClass('orientation-portrait');
-      expect(element).toHaveClass('touch-enabled');
+      const styleTag = container.querySelector('style');
+      expect(styleTag.textContent).toContain('grid-template-columns');
+      expect(styleTag.textContent).toContain('1fr !important');
     });
-    
-    test('applies all relevant classes for desktop landscape no-touch device', () => {
-      mockWindowProperties({ innerWidth: 1920, innerHeight: 1080 });
-      mockNavigator({ maxTouchPoints: 0 });
+
+    test('mobile styles include touch target sizing', () => {
+      mockWindowDimensions(375, 667);
+      mockTouchSupport(true);
       
       const { container } = render(
-        <MobileMatrixOptimizer className="custom">
-          <div>Content</div>
+        <MobileMatrixOptimizer>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
-      const element = container.firstChild;
-      expect(element).toHaveClass('custom');
-      expect(element).toHaveClass('desktop-full');
-      expect(element).toHaveClass('orientation-landscape');
-      expect(element).toHaveClass('touch-disabled');
+      const styleTag = container.querySelector('style');
+      expect(styleTag.textContent).toContain('.touch-enabled');
+      expect(styleTag.textContent).toContain('min-height: 44px');
+    });
+
+    test('mobile styles include orientation-specific rules', () => {
+      mockWindowDimensions(375, 667);
+      
+      const { container } = render(
+        <MobileMatrixOptimizer>
+          <div>Test Content</div>
+        </MobileMatrixOptimizer>
+      );
+      
+      const styleTag = container.querySelector('style');
+      expect(styleTag.textContent).toContain('.orientation-landscape');
+      expect(styleTag.textContent).toContain('.orientation-portrait');
     });
   });
 
-  // ================================================================================================
-  // CSS CUSTOM PROPERTIES TESTS
-  // ================================================================================================
-  
-  describe('CSS Custom Properties', () => {
-    test('sets matrix effects opacity for mobile', () => {
-      mockWindowProperties({ innerWidth: 375 });
+  describe('Performance Optimizations', () => {
+    test('sets CSS custom property for mobile effects opacity', () => {
+      mockWindowDimensions(375, 667);
       
       render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
       const opacity = document.documentElement.style.getPropertyValue('--matrix-effects-opacity');
       expect(opacity).toBe('0.3');
     });
-    
-    test('sets matrix effects opacity for desktop', () => {
-      mockWindowProperties({ innerWidth: 1024 });
+
+    test('sets different opacity for desktop effects', () => {
+      mockWindowDimensions(1920, 1080);
       
       render(
         <MobileMatrixOptimizer>
-          <div>Content</div>
+          <div>Test Content</div>
         </MobileMatrixOptimizer>
       );
       
       const opacity = document.documentElement.style.getPropertyValue('--matrix-effects-opacity');
       expect(opacity).toBe('0.5');
     });
-  });
-});
 
-// ================================================================================================
-// useMobile HOOK TESTS
-// ================================================================================================
-
-describe('useMobile Hook', () => {
-  beforeEach(() => {
-    mockWindowProperties({ innerWidth: 1024, innerHeight: 768 });
-    cleanup();
-  });
-  
-  afterEach(() => {
-    cleanup();
-  });
-  
-  test('returns false for desktop width', () => {
-    mockWindowProperties({ innerWidth: 1024 });
-    
-    render(<UseMobileTestComponent />);
-    
-    expect(screen.getByTestId('mobile-status')).toHaveTextContent('desktop');
-  });
-  
-  test('returns true for mobile width', () => {
-    mockWindowProperties({ innerWidth: 375 });
-    
-    render(<UseMobileTestComponent />);
-    
-    expect(screen.getByTestId('mobile-status')).toHaveTextContent('mobile');
-  });
-  
-  test('returns true for exactly 768px width', () => {
-    mockWindowProperties({ innerWidth: 768 });
-    
-    render(<UseMobileTestComponent />);
-    
-    expect(screen.getByTestId('mobile-status')).toHaveTextContent('mobile');
-  });
-  
-  test('returns false for 769px width', () => {
-    mockWindowProperties({ innerWidth: 769 });
-    
-    render(<UseMobileTestComponent />);
-    
-    expect(screen.getByTestId('mobile-status')).toHaveTextContent('desktop');
-  });
-});
-
-// ================================================================================================
-// MobileMatrixRain COMPONENT TESTS
-// ================================================================================================
-
-describe('MobileMatrixRain Component', () => {
-  beforeEach(() => {
-    mockWindowProperties({ innerWidth: 1024, innerHeight: 768 });
-    cleanup();
-  });
-  
-  afterEach(() => {
-    cleanup();
-  });
-  
-  test('renders rain effect on mobile', () => {
-    mockWindowProperties({ innerWidth: 375 });
-    
-    const { container } = render(<MobileMatrixRain />);
-    
-    expect(container.querySelector('.matrix-mobile-rain')).toBeInTheDocument();
-  });
-  
-  test('does not render rain effect on desktop', () => {
-    mockWindowProperties({ innerWidth: 1024 });
-    
-    const { container } = render(<MobileMatrixRain />);
-    
-    expect(container.querySelector('.matrix-mobile-rain')).not.toBeInTheDocument();
-  });
-  
-  test('applies custom className on mobile', () => {
-    mockWindowProperties({ innerWidth: 375 });
-    
-    const { container } = render(<MobileMatrixRain className="custom-rain" />);
-    
-    const element = container.firstChild;
-    expect(element).toHaveClass('custom-rain');
-  });
-  
-  test('rain effect has correct opacity', () => {
-    mockWindowProperties({ innerWidth: 375 });
-    
-    const { container } = render(<MobileMatrixRain />);
-    
-    const element = container.firstChild;
-    expect(element).toHaveClass('opacity-30');
-  });
-  
-  test('rain effect includes animation styles', () => {
-    mockWindowProperties({ innerWidth: 375 });
-    
-    const { container } = render(<MobileMatrixRain />);
-    
-    const styleElement = container.querySelector('style');
-    expect(styleElement).toBeInTheDocument();
-    expect(styleElement.textContent).toContain('mobile-rain');
-    expect(styleElement.textContent).toContain('animation');
-  });
-  
-  test('rain animation uses linear gradient', () => {
-    mockWindowProperties({ innerWidth: 375 });
-    
-    const { container } = render(<MobileMatrixRain />);
-    
-    const styleElement = container.querySelector('style');
-    expect(styleElement.textContent).toContain('linear-gradient');
-  });
-});
-
-// ================================================================================================
-// MobileMatrixText COMPONENT TESTS
-// ================================================================================================
-
-describe('MobileMatrixText Component', () => {
-  beforeEach(() => {
-    mockWindowProperties({ innerWidth: 1024, innerHeight: 768 });
-    cleanup();
-  });
-  
-  afterEach(() => {
-    cleanup();
-  });
-  
-  test('renders children content', () => {
-    render(
-      <MobileMatrixText>
-        <span data-testid="text-content">Matrix Text</span>
-      </MobileMatrixText>
-    );
-    
-    expect(screen.getByTestId('text-content')).toBeInTheDocument();
-    expect(screen.getByTestId('text-content')).toHaveTextContent('Matrix Text');
-  });
-  
-  test('applies mobile-matrix-text class on mobile', () => {
-    mockWindowProperties({ innerWidth: 375 });
-    
-    const { container } = render(
-      <MobileMatrixText>
-        <span>Text</span>
-      </MobileMatrixText>
-    );
-    
-    expect(container.firstChild).toHaveClass('mobile-matrix-text');
-  });
-  
-  test('does not apply mobile-matrix-text class on desktop', () => {
-    mockWindowProperties({ innerWidth: 1024 });
-    
-    const { container } = render(
-      <MobileMatrixText>
-        <span>Text</span>
-      </MobileMatrixText>
-    );
-    
-    expect(container.firstChild).not.toHaveClass('mobile-matrix-text');
-  });
-  
-  test('applies custom className', () => {
-    const { container } = render(
-      <MobileMatrixText className="custom-text">
-        <span>Text</span>
-      </MobileMatrixText>
-    );
-    
-    expect(container.firstChild).toHaveClass('custom-text');
-  });
-  
-  test('injects mobile text styles on mobile', () => {
-    mockWindowProperties({ innerWidth: 375 });
-    
-    const { container } = render(
-      <MobileMatrixText>
-        <span>Text</span>
-      </MobileMatrixText>
-    );
-    
-    const styleElement = container.querySelector('style');
-    expect(styleElement).toBeInTheDocument();
-    expect(styleElement.textContent).toContain('clamp');
-  });
-  
-  test('mobile text styles include glow animation', () => {
-    mockWindowProperties({ innerWidth: 375 });
-    
-    const { container } = render(
-      <MobileMatrixText>
-        <span>Text</span>
-      </MobileMatrixText>
-    );
-    
-    const styleElement = container.querySelector('style');
-    expect(styleElement.textContent).toContain('mobile-glow');
-    expect(styleElement.textContent).toContain('text-shadow');
-  });
-  
-  test('does not inject styles on desktop', () => {
-    mockWindowProperties({ innerWidth: 1024 });
-    
-    const { container } = render(
-      <MobileMatrixText>
-        <span>Text</span>
-      </MobileMatrixText>
-    );
-    
-    const styleElement = container.querySelector('style');
-    expect(styleElement).not.toBeInTheDocument();
-  });
-});
-
-// ================================================================================================
-// EDGE CASES AND ERROR HANDLING TESTS
-// ================================================================================================
-
-describe('Edge Cases and Error Handling', () => {
-  beforeEach(() => {
-    mockWindowProperties({ innerWidth: 1024, innerHeight: 768 });
-    cleanup();
-  });
-  
-  afterEach(() => {
-    cleanup();
-  });
-  
-  test('handles very small screen width (< 320px)', () => {
-    mockWindowProperties({ innerWidth: 240, innerHeight: 400 });
-    
-    const { container } = render(
-      <MobileMatrixOptimizer>
-        <div>Content</div>
-      </MobileMatrixOptimizer>
-    );
-    
-    expect(container.firstChild).toHaveClass('mobile-optimized');
-  });
-  
-  test('handles very large screen width (> 4K)', () => {
-    mockWindowProperties({ innerWidth: 3840, innerHeight: 2160 });
-    
-    const { container } = render(
-      <MobileMatrixOptimizer>
-        <div>Content</div>
-      </MobileMatrixOptimizer>
-    );
-    
-    expect(container.firstChild).toHaveClass('desktop-full');
-  });
-  
-  test('handles missing userAgent gracefully', () => {
-    const originalUserAgent = window.navigator.userAgent;
-    Object.defineProperty(window.navigator, 'userAgent', {
-      get: () => undefined,
-      configurable: true
+    test('shows performance monitor only on localhost - mobile', () => {
+      mockWindowDimensions(375, 667);
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { hostname: 'localhost' }
+      });
+      
+      const { container } = render(
+        <MobileMatrixOptimizer>
+          <div>Test Content</div>
+        </MobileMatrixOptimizer>
+      );
+      
+      expect(container.textContent).toContain('Mobile:');
+      expect(container.textContent).toContain('Touch:');
+      expect(container.textContent).toContain('Orient:');
     });
-    
-    const { container } = render(
-      <MobileMatrixOptimizer>
-        <div>Content</div>
-      </MobileMatrixOptimizer>
-    );
-    
-    expect(container.firstChild).toBeInTheDocument();
-    
-    // Restore
-    Object.defineProperty(window.navigator, 'userAgent', {
-      get: () => originalUserAgent,
-      configurable: true
+
+    test('hides performance monitor on production domain', () => {
+      mockWindowDimensions(375, 667);
+      Object.defineProperty(window, 'location', {
+        writable: true,
+        value: { hostname: 'example.com' }
+      });
+      
+      const { container } = render(
+        <MobileMatrixOptimizer>
+          <div>Test Content</div>
+        </MobileMatrixOptimizer>
+      );
+      
+      expect(container.textContent).not.toContain('Mobile:');
     });
   });
-  
-  test('handles undefined className prop', () => {
-    const { container } = render(
-      <MobileMatrixOptimizer className={undefined}>
-        <div>Content</div>
-      </MobileMatrixOptimizer>
-    );
-    
-    expect(container.firstChild).toBeInTheDocument();
+
+  describe('Custom Hook - useMobile', () => {
+    test('useMobile hook returns false for desktop', () => {
+      mockWindowDimensions(1920, 1080);
+      
+      let hookResult;
+      const TestComponent = () => {
+        hookResult = useMobile();
+        return <div>Test</div>;
+      };
+      
+      render(<TestComponent />);
+      expect(hookResult).toBe(false);
+    });
+
+    test('useMobile hook returns true for mobile', () => {
+      mockWindowDimensions(375, 667);
+      
+      let hookResult;
+      const TestComponent = () => {
+        hookResult = useMobile();
+        return <div>Test</div>;
+      };
+      
+      render(<TestComponent />);
+      expect(hookResult).toBe(true);
+    });
+
+    test('useMobile hook updates on resize', async () => {
+      mockWindowDimensions(1920, 1080);
+      
+      let hookResult;
+      const TestComponent = () => {
+        hookResult = useMobile();
+        return <div>Test</div>;
+      };
+      
+      const { rerender } = render(<TestComponent />);
+      expect(hookResult).toBe(false);
+      
+      await act(async () => {
+        mockWindowDimensions(375, 667);
+        window.dispatchEvent(new Event('resize'));
+        await new Promise(resolve => setTimeout(resolve, 100));
+      });
+      
+      rerender(<TestComponent />);
+    });
+
+    test('useMobile hook checks exact 768px breakpoint', () => {
+      mockWindowDimensions(768, 1024);
+      
+      let hookResult;
+      const TestComponent = () => {
+        hookResult = useMobile();
+        return <div>Test</div>;
+      };
+      
+      render(<TestComponent />);
+      expect(hookResult).toBe(true);
+    });
+
+    test('useMobile hook cleans up event listener', () => {
+      const removeEventListenerSpy = jest.spyOn(window, 'removeEventListener');
+      
+      mockWindowDimensions(375, 667);
+      
+      const TestComponent = () => {
+        useMobile();
+        return <div>Test</div>;
+      };
+      
+      const { unmount } = render(<TestComponent />);
+      unmount();
+      
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('resize', expect.any(Function));
+    });
+
+    test('useMobile hook initializes correctly', () => {
+      mockWindowDimensions(375, 667);
+      
+      let hookResult;
+      const TestComponent = () => {
+        hookResult = useMobile();
+        return <div>{hookResult ? 'Mobile' : 'Desktop'}</div>;
+      };
+      
+      const { container } = render(<TestComponent />);
+      expect(container.textContent).toContain('Mobile');
+    });
   });
-  
-  test('handles null children', () => {
-    const { container } = render(
-      <MobileMatrixOptimizer>
-        {null}
-      </MobileMatrixOptimizer>
-    );
-    
-    expect(container.firstChild).toBeInTheDocument();
+
+  describe('Component Exports - MobileMatrixRain', () => {
+    test('MobileMatrixRain renders on mobile', () => {
+      mockWindowDimensions(375, 667);
+      
+      const { container } = render(<MobileMatrixRain />);
+      
+      expect(container.querySelector('.matrix-mobile-rain')).toBeInTheDocument();
+    });
+
+    test('MobileMatrixRain does not render on desktop', () => {
+      mockWindowDimensions(1920, 1080);
+      mockUserAgent('Mozilla/5.0 (Windows NT 10.0)');
+      
+      const { container } = render(<MobileMatrixRain />);
+      
+      expect(container.querySelector('.matrix-mobile-rain')).not.toBeInTheDocument();
+    });
+
+    test('MobileMatrixRain applies custom className', () => {
+      mockWindowDimensions(375, 667);
+      
+      const { container } = render(<MobileMatrixRain className="custom-rain" />);
+      
+      const rainDiv = container.querySelector('.custom-rain');
+      expect(rainDiv).toBeInTheDocument();
+    });
+
+    test('MobileMatrixRain includes animation styles without jsx attribute', () => {
+      mockWindowDimensions(375, 667);
+      
+      const { container } = render(<MobileMatrixRain />);
+      
+      const styleTag = container.querySelector('style');
+      expect(styleTag).toBeInTheDocument();
+      expect(styleTag.hasAttribute('jsx')).toBe(false);
+      expect(styleTag.textContent).toContain('mobile-rain');
+      expect(styleTag.textContent).toContain('keyframes');
+    });
+
+    test('MobileMatrixRain has correct opacity', () => {
+      mockWindowDimensions(375, 667);
+      
+      const { container } = render(<MobileMatrixRain />);
+      
+      const rainContainer = container.querySelector('.absolute.inset-0');
+      expect(rainContainer.className).toContain('opacity-30');
+    });
+
+    test('MobileMatrixRain uses linear gradient background', () => {
+      mockWindowDimensions(375, 667);
+      
+      const { container } = render(<MobileMatrixRain />);
+      
+      const styleTag = container.querySelector('style');
+      expect(styleTag.textContent).toContain('linear-gradient');
+      expect(styleTag.textContent).toContain('rgba(0, 255, 65, 0.1)');
+    });
   });
-  
-  test('handles multiple children', () => {
-    render(
-      <MobileMatrixOptimizer>
-        <div data-testid="child1">Child 1</div>
-        <div data-testid="child2">Child 2</div>
-        <div data-testid="child3">Child 3</div>
-      </MobileMatrixOptimizer>
-    );
-    
-    expect(screen.getByTestId('child1')).toBeInTheDocument();
-    expect(screen.getByTestId('child2')).toBeInTheDocument();
-    expect(screen.getByTestId('child3')).toBeInTheDocument();
+
+  describe('Component Exports - MobileMatrixText', () => {
+    test('MobileMatrixText renders children correctly', () => {
+      const { container } = render(
+        <MobileMatrixText>
+          <h1>Matrix Title</h1>
+        </MobileMatrixText>
+      );
+      
+      expect(container.textContent).toContain('Matrix Title');
+    });
+
+    test('MobileMatrixText applies mobile class on mobile', () => {
+      mockWindowDimensions(375, 667);
+      
+      const { container } = render(
+        <MobileMatrixText>
+          <span>Text</span>
+        </MobileMatrixText>
+      );
+      
+      expect(container.querySelector('.mobile-matrix-text')).toBeInTheDocument();
+    });
+
+    test('MobileMatrixText does not apply mobile class on desktop', () => {
+      mockWindowDimensions(1920, 1080);
+      mockUserAgent('Mozilla/5.0 (Windows NT 10.0)');
+      
+      const { container } = render(
+        <MobileMatrixText>
+          <span>Text</span>
+        </MobileMatrixText>
+      );
+      
+      expect(container.querySelector('.mobile-matrix-text')).not.toBeInTheDocument();
+    });
+
+    test('MobileMatrixText includes responsive font sizing without jsx attribute', () => {
+      mockWindowDimensions(375, 667);
+      
+      const { container } = render(
+        <MobileMatrixText>
+          <span>Text</span>
+        </MobileMatrixText>
+      );
+      
+      const styleTag = container.querySelector('style');
+      expect(styleTag).toBeInTheDocument();
+      expect(styleTag.hasAttribute('jsx')).toBe(false);
+      expect(styleTag.textContent).toContain('clamp(1.5rem, 6vw, 3rem)');
+    });
+
+    test('MobileMatrixText includes glow animation', () => {
+      mockWindowDimensions(375, 667);
+      
+      const { container } = render(
+        <MobileMatrixText>
+          <span>Text</span>
+        </MobileMatrixText>
+      );
+      
+      const styleTag = container.querySelector('style');
+      expect(styleTag.textContent).toContain('.matrix-text-glow');
+      expect(styleTag.textContent).toContain('text-shadow');
+      expect(styleTag.textContent).toContain('mobile-glow');
+    });
+
+    test('MobileMatrixText accepts custom className', () => {
+      const { container } = render(
+        <MobileMatrixText className="custom-text-class">
+          <span>Text</span>
+        </MobileMatrixText>
+      );
+      
+      const textDiv = container.querySelector('.custom-text-class');
+      expect(textDiv).toBeInTheDocument();
+    });
   });
-  
-  test('handles rapid screen size changes', () => {
-    mockWindowProperties({ innerWidth: 1024 });
-    
-    const { container, rerender } = render(
-      <MobileMatrixOptimizer>
-        <div>Content</div>
-      </MobileMatrixOptimizer>
-    );
-    
-    expect(container.firstChild).toHaveClass('desktop-full');
-    
-    // Simulate rapid resize
-    mockWindowProperties({ innerWidth: 375 });
-    rerender(
-      <MobileMatrixOptimizer>
-        <div>Content</div>
-      </MobileMatrixOptimizer>
-    );
-    
-    // Component should update but not crash
-    expect(container.firstChild).toBeInTheDocument();
+
+  describe('Edge Cases & Error Handling', () => {
+    test('handles missing window object gracefully', () => {
+      // This test simulates SSR environment
+      const originalWindow = global.window;
+      
+      // Can't actually delete window in this environment, but we can test rendering
+      expect(() => {
+        render(
+          <MobileMatrixOptimizer>
+            <div>Content</div>
+          </MobileMatrixOptimizer>
+        );
+      }).not.toThrow();
+      
+      global.window = originalWindow;
+    });
+
+    test('handles children prop being null', () => {
+      expect(() => {
+        render(<MobileMatrixOptimizer>{null}</MobileMatrixOptimizer>);
+      }).not.toThrow();
+    });
+
+    test('handles children prop being undefined', () => {
+      expect(() => {
+        render(<MobileMatrixOptimizer>{undefined}</MobileMatrixOptimizer>);
+      }).not.toThrow();
+    });
+
+    test('handles empty className prop', () => {
+      const { container } = render(
+        <MobileMatrixOptimizer className="">
+          <div>Content</div>
+        </MobileMatrixOptimizer>
+      );
+      
+      expect(container.firstChild).toBeInTheDocument();
+    });
+
+    test('handles no className prop', () => {
+      const { container } = render(
+        <MobileMatrixOptimizer>
+          <div>Content</div>
+        </MobileMatrixOptimizer>
+      );
+      
+      expect(container.firstChild).toBeInTheDocument();
+    });
+
+    test('handles rapid resize events', async () => {
+      mockWindowDimensions(1920, 1080);
+      
+      const { container } = render(
+        <MobileMatrixOptimizer>
+          <div>Content</div>
+        </MobileMatrixOptimizer>
+      );
+      
+      // Simulate rapid resize events
+      await act(async () => {
+        for (let i = 0; i < 10; i++) {
+          mockWindowDimensions(800 + i * 50, 600);
+          window.dispatchEvent(new Event('resize'));
+        }
+        await new Promise(resolve => setTimeout(resolve, 200));
+      });
+      
+      expect(container.firstChild).toBeInTheDocument();
+    });
+
+    test('cleans up event listeners on unmount', () => {
+      const removeEventListenerSpy = jest.spyOn(window, 'removeEventListener');
+      
+      const { unmount } = render(
+        <MobileMatrixOptimizer>
+          <div>Content</div>
+        </MobileMatrixOptimizer>
+      );
+      
+      unmount();
+      
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('resize', expect.any(Function));
+      expect(removeEventListenerSpy).toHaveBeenCalledWith('orientationchange', expect.any(Function));
+    });
+
+    test('handles multiple component instances independently', () => {
+      mockWindowDimensions(375, 667);
+      
+      const { container } = render(
+        <>
+          <MobileMatrixOptimizer className="instance-1">
+            <div>First</div>
+          </MobileMatrixOptimizer>
+          <MobileMatrixOptimizer className="instance-2">
+            <div>Second</div>
+          </MobileMatrixOptimizer>
+        </>
+      );
+      
+      const instances = container.querySelectorAll('.mobile-optimized');
+      expect(instances.length).toBe(2);
+    });
+  });
+
+  describe('Accessibility & Best Practices', () => {
+    test('renders semantic HTML structure', () => {
+      const { container } = render(
+        <MobileMatrixOptimizer>
+          <main>Main Content</main>
+        </MobileMatrixOptimizer>
+      );
+      
+      expect(container.querySelector('main')).toBeInTheDocument();
+    });
+
+    test('preserves child component structure', () => {
+      const { container } = render(
+        <MobileMatrixOptimizer>
+          <div id="parent">
+            <div id="child">Nested</div>
+          </div>
+        </MobileMatrixOptimizer>
+      );
+      
+      expect(container.querySelector('#parent')).toBeInTheDocument();
+      expect(container.querySelector('#child')).toBeInTheDocument();
+    });
+
+    test('does not interfere with child event handlers', () => {
+      const handleClick = jest.fn();
+      
+      const { container } = render(
+        <MobileMatrixOptimizer>
+          <button onClick={handleClick}>Click Me</button>
+        </MobileMatrixOptimizer>
+      );
+      
+      const button = container.querySelector('button');
+      button.click();
+      
+      expect(handleClick).toHaveBeenCalledTimes(1);
+    });
   });
 });

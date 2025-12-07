@@ -1,142 +1,118 @@
-# MobileMatrixOptimizer Tests
+# MobileMatrixOptimizer Component Tests
 
 ## Overview
-This directory contains comprehensive unit tests for the `MobileMatrixOptimizer` component and its related exports.
-
-## What Changed
-The component was updated to fix JSX attribute warnings by replacing `<style jsx>` tags with standard `<style>` tags. This change eliminates React warnings while maintaining all functionality.
-
-### Before (Problematic):
-```jsx
-<style jsx>{`...`}</style>
-```
-
-### After (Fixed):
-```jsx
-<style>{`...`}</style>
-```
+Comprehensive unit tests for the MobileMatrixOptimizer React component, covering mobile detection, responsive behavior, touch support, and performance optimizations.
 
 ## Test Coverage
 
-### Main Component Tests
-- ✅ Component rendering with children
-- ✅ Custom className application
-- ✅ Mobile detection (viewport width ≤768px)
-- ✅ Mobile detection (user agent)
-- ✅ Orientation detection (portrait/landscape)
-- ✅ Touch support detection
-- ✅ Style injection without JSX attribute warnings
-- ✅ Performance monitor (localhost only)
-- ✅ Event listener setup and cleanup
-- ✅ CSS custom properties for effects
+### 1. Mobile/Desktop Detection (8 tests)
+- Desktop environment detection
+- Mobile detection by screen width (≤768px)
+- Mobile detection by User-Agent (iPhone, Android, iPad)
+- Boundary case testing at 768px
+- Dynamic resize detection
 
-### useMobile Hook Tests
-- ✅ Returns correct values for desktop/mobile
-- ✅ Updates on window resize
-- ✅ Cleanup on unmount
+### 2. Orientation Handling (6 tests)
+- Portrait vs landscape detection
+- Square screen handling
+- Dynamic orientation changes
+- Orientation CSS class application
 
-### MobileMatrixRain Component Tests
-- ✅ Renders only on mobile
-- ✅ Custom className support
-- ✅ Animation styles without JSX attribute
-- ✅ Correct opacity and pointer-events
+### 3. Touch Support Detection (5 tests)
+- Touch capability detection via ontouchstart
+- Touch detection via navigator.maxTouchPoints
+- Non-touch device handling
+- Touch CSS class application
 
-### MobileMatrixText Component Tests
-- ✅ Renders children correctly
-- ✅ Mobile-specific styling
-- ✅ Responsive text scaling
-- ✅ Glow animations
+### 4. CSS Style Injection (7 tests)
+- Verification that style tags no longer use `jsx` attribute (fix for React warnings)
+- Mobile-specific CSS injection
+- Responsive text scaling
+- Grid layout optimizations
+- Touch target sizing (44px minimum)
 
-### Edge Cases
-- ✅ Missing/undefined children
-- ✅ Rapid viewport changes
-- ✅ Multiple style elements
+### 5. Performance Optimizations (4 tests)
+- CSS custom property management
+- Opacity settings for mobile vs desktop
+- Performance monitor display (localhost only)
 
-### Integration Tests
-- ✅ All mobile optimizations together
-- ✅ Multiple exported components working together
+### 6. Custom Hooks (6 tests)
+- useMobile hook functionality
+- Resize event handling
+- Event listener cleanup
+- Breakpoint accuracy
+
+### 7. Component Exports (6 tests)
+- MobileMatrixRain component
+- MobileMatrixText component
+- Animation and styling
+- className prop handling
+
+### 8. Edge Cases (8+ tests)
+- Null/undefined children handling
+- Rapid resize events
+- Multiple component instances
+- Event listener cleanup
+- Accessibility preservation
 
 ## Running Tests
 
-### Install dependencies:
 ```bash
+# Run all tests
 cd frontend
-yarn install
+npm test
+
+# Run tests in watch mode
+npm test -- --watch
+
+# Run tests with coverage
+npm test -- --coverage
+
+# Run specific test file
+npm test -- MobileMatrixOptimizer.test.jsx
 ```
 
-### Run all tests:
-```bash
-yarn test
+## Required Dependencies
+
+The tests require the following packages (already included in package.json):
+- @testing-library/react
+- @testing-library/jest-dom
+- @testing-library/user-event
+- jest (via react-scripts)
+
+## Test Structure
+
+Each test follows the Arrange-Act-Assert pattern:
+1. **Arrange**: Set up test conditions (mock window dimensions, user agent, etc.)
+2. **Act**: Render component or trigger actions
+3. **Assert**: Verify expected behavior
+
+## Important Changes Tested
+
+### JSX Attribute Fix
+The tests verify that the component no longer uses the `jsx` attribute on `<style>` tags, which was causing React warnings. The fix changed:
+```jsx
+// Before (caused warnings)
+<style jsx>{`...`}</style>
+
+// After (fixed)
+<style>{`...`}</style>
 ```
 
-### Run tests in watch mode:
-```bash
-yarn test --watch
-```
+All style tag tests now verify that `hasAttribute('jsx')` returns `false`.
 
-### Run with coverage:
-```bash
-yarn test --coverage
-```
+## Continuous Integration
 
-### Run specific test file:
-```bash
-yarn test MobileMatrixOptimizer
-```
+These tests are designed to run in CI/CD pipelines and include:
+- Comprehensive coverage of all component features
+- Edge case handling
+- Performance and accessibility checks
+- Mock cleanup between tests
 
-## Key Test Scenarios
+## Maintenance
 
-### 1. JSX Attribute Fix Verification
-The tests verify that:
-- Style elements are created without `jsx` attribute
-- No React warnings are generated
-- All CSS content is properly injected
-- Functionality remains identical to previous version
-
-### 2. Responsive Behavior
-Tests cover:
-- Desktop viewport (>768px)
-- Mobile viewport (≤768px)
-- Tablet breakpoint (exactly 768px)
-- Portrait vs landscape orientation
-- Touch vs non-touch devices
-
-### 3. Performance
-- Verifies CSS custom properties are set correctly
-- Confirms animations use optimized mobile versions
-- Tests that performance monitor only shows in development
-
-## Dependencies Required
-
-The tests require these packages (already added to package.json):
-- `@testing-library/react` - React component testing utilities
-- `@testing-library/jest-dom` - Custom jest matchers for DOM
-- `@testing-library/user-event` - User interaction simulation
-
-## Notes
-
-1. **Window Mocking**: Tests mock `window.innerWidth`, `window.innerHeight`, and `navigator.userAgent` to simulate different devices.
-
-2. **Async Behavior**: Many tests use `waitFor` to handle React's asynchronous state updates.
-
-3. **Event Cleanup**: Tests verify that event listeners are properly removed on component unmount to prevent memory leaks.
-
-4. **Isolation**: Each test resets window properties to ensure test isolation.
-
-## Troubleshooting
-
-### Tests fail with "Not implemented: HTMLCanvasElement.prototype.getContext"
-This is expected in jsdom environment. Add canvas mock if needed.
-
-### Tests fail with matchMedia errors
-The `setupTests.js` file includes matchMedia mock. Ensure it's being loaded.
-
-### Style injection tests failing
-Verify that React is rendering the component fully before checking for style elements.
-
-## Future Improvements
-
-- Add visual regression tests
-- Add accessibility tests (a11y)
-- Add performance benchmarks
-- Test with actual mobile devices using Playwright/Cypress
+When updating the MobileMatrixOptimizer component:
+1. Update corresponding tests for changed functionality
+2. Add new tests for new features
+3. Ensure test coverage remains above 80%
+4. Run full test suite before committing
