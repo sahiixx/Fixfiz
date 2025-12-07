@@ -177,8 +177,8 @@ class HealthChecker:
     async def get_basic_status(self) -> Dict[str, Any]:
         """Get basic health status (fast check)"""
         try:
-            db = get_database()
-            await client.admin.command('ping')
+            database = get_database()
+            await db.client.admin.command('ping')
             
             return {
                 "status": "healthy",
