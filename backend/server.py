@@ -136,6 +136,14 @@ if OPTIMIZATIONS_ENABLED:
     except Exception as e:
         logger.warning(f"Failed to add Security Headers middleware: {e}")
 
+# Add Metrics middleware
+if OPTIMIZATIONS_ENABLED:
+    try:
+        app.add_middleware(MetricsMiddleware)
+        logger.info("✅ Metrics tracking enabled")
+    except Exception as e:
+        logger.warning(f"Failed to add Metrics middleware: {e}")
+
 # Analytics middleware
 class AnalyticsMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
