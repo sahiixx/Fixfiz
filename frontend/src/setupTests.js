@@ -4,7 +4,7 @@
 // learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom';
 
-// Mock window.matchMedia
+// Mock window.matchMedia for tests
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: jest.fn().mockImplementation(query => ({
@@ -38,15 +38,20 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
 };
 
-// Set up default window dimensions for tests
-Object.defineProperty(window, 'innerWidth', {
-  writable: true,
-  configurable: true,
-  value: 1024,
+// Set up console error suppression for known warnings
+const originalError = console.error;
+beforeAll(() => {
+  console.error = (...args) => {
+    if (
+      typeof args[0] === 'string' &&
+      args[0].includes('Not implemented: HTMLFormElement.prototype.submit')
+    ) {
+      return;
+    }
+    originalError.call(console, ...args);
+  };
 });
 
-Object.defineProperty(window, 'innerHeight', {
-  writable: true,
-  configurable: true,
-  value: 768,
+afterAll(() => {
+  console.error = originalError;
 });
