@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # CORS
     cors_origins: List[str] = [
         "http://localhost:3000",
-        "https://repo-pipeline.preview.emergentagent.com"
+        "https://backend-hardening.preview.emergentagent.com"
     ]
     
     # API Settings
