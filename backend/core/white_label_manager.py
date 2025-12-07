@@ -330,14 +330,12 @@ class WhiteLabelManager:
                 if company_name:
                     domain = f"{company_name.lower().replace(' ', '-').replace('_', '-')}.nowheredigital.ae"
                 else:
-                    import uuid
                     domain = f"reseller-{uuid.uuid4().hex[:8]}.nowheredigital.ae"
             
             db = get_database()
             existing = await db.tenants.find_one({"config.domain": domain})
             if existing:
                 # If domain exists, append random suffix
-                import uuid
                 domain = f"{domain.split('.')[0]}-{uuid.uuid4().hex[:4]}.nowheredigital.ae"
             
             # Create base tenant configuration for reseller
