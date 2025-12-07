@@ -19,9 +19,9 @@ class HealthChecker:
     async def check_database(self) -> Dict[str, Any]:
         """Check database connectivity and stats"""
         try:
-            db = get_database()
+            database = get_database()
             # Ping database
-            await client.admin.command('ping')
+            await db.client.admin.command('ping')
             
             # Get database stats
             stats = await db.command('dbStats')
