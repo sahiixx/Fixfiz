@@ -55,14 +55,21 @@ class AIModelConfig:
             "best_for": "fast reasoning tasks",
             "cost": "low"
         },
-        "claude-3-5-sonnet-20250219": {
+        "claude-3-5-sonnet-20241022": {
             "provider": "anthropic",
             "strengths": ["coding", "analysis", "writing", "200k_context"],
             "max_tokens": 200000,
             "best_for": "coding, long document analysis, detailed writing",
             "cost": "moderate"
         },
-        "gemini-2.0-flash-exp": {
+        "claude-3-5-sonnet-20241022-v2": {
+            "provider": "anthropic",
+            "strengths": ["coding", "analysis", "writing", "200k_context", "improved_reasoning"],
+            "max_tokens": 200000,
+            "best_for": "advanced coding, long document analysis, detailed writing",
+            "cost": "moderate"
+        },
+        "gemini-2.0-flash": {
             "provider": "google",
             "strengths": ["multimodal", "real_time", "fast", "vision"],
             "max_tokens": 1000000,
