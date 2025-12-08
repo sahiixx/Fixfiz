@@ -33,6 +33,9 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_expiration: int = 24 * 60 * 60  # 24 hours
     
+    # Environment
+    environment: str = os.getenv("ENVIRONMENT", "development")
+    
     # CORS - Read from environment variable or use defaults
     cors_origins: List[str] = os.getenv(
         "CORS_ORIGINS",
