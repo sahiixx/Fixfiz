@@ -187,7 +187,8 @@ Problem:
                 enhanced_prompt += f"\n\nContext: {json.dumps(context, indent=2)}"
             
             session_id = f"reasoning_{task_type}"
-            chat = await self.create_chat_session(session_id, model=model, temperature=0.3)
+            # o1 models only support temperature=1
+            chat = await self.create_chat_session(session_id, model=model, temperature=1.0)
             
             user_message = UserMessage(text=enhanced_prompt)
             response = await chat.send_message(user_message)
