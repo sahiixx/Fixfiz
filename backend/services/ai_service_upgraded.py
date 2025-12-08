@@ -89,7 +89,7 @@ class UpgradedAIService:
         self.api_key = settings.emergent_llm_key or settings.openai_api_key
         self.default_model = AIModelConfig.GPT_4O
         self.reasoning_model = AIModelConfig.O1_MINI
-        self.coding_model = AIModelConfig.CLAUDE_3_5_SONNET_20250219
+        self.coding_model = AIModelConfig.CLAUDE_3_5_SONNET
         self.fast_model = AIModelConfig.GEMINI_2_0_FLASH
         
         logger.info(f"🚀 Upgraded AI Service initialized with latest 2025 models (API key configured: {bool(self.api_key)})")
