@@ -23,12 +23,12 @@ class AIModelConfig:
     O3_MINI = "o3-mini"  # Latest reasoning (if available)
     
     # Anthropic Latest Models  
-    CLAUDE_3_5_SONNET_20250219 = "claude-3-5-sonnet-20250219"  # Latest Claude (Feb 2025) - Best for coding
-    CLAUDE_3_5_SONNET = "claude-3-5-sonnet-20241022"  # Previous stable version
+    CLAUDE_3_5_SONNET_V2 = "claude-3-5-sonnet-20241022-v2"  # Latest Claude v2 - Best for coding
+    CLAUDE_3_5_SONNET = "claude-3-5-sonnet-20241022"  # Stable version
     CLAUDE_3_5_HAIKU = "claude-3-5-haiku-20241022"  # Fast and efficient
     
     # Google Latest Models
-    GEMINI_2_0_FLASH = "gemini-2.0-flash-exp"  # Latest Gemini - Multimodal, real-time
+    GEMINI_2_0_FLASH = "gemini-2.0-flash"  # Latest Gemini - Multimodal, real-time
     GEMINI_1_5_PRO = "gemini-1.5-pro-latest"  # Stable version
     GEMINI_1_5_FLASH = "gemini-1.5-flash-latest"  # Fast version
     
