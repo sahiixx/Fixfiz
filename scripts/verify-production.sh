@@ -258,10 +258,15 @@ echo -e "\n${BLUE}[9/10] Checking Docker Configuration...${NC}"
 if [ -f "docker-compose.yml" ]; then
     check_pass "docker-compose.yml exists"
     
-    if docker-compose config --quiet 2>/dev/null; then
-        check_pass "docker-compose.yml is valid"
+    # Check if docker is available
+    if command -v docker-compose &> /dev/null || command -v docker &> /dev/null; then
+        if docker-compose config --quiet 2>/dev/null || docker compose config --quiet 2>/dev/null; then
+            check_pass "docker-compose.yml is valid"
+        else
+            check_warn "docker-compose.yml may have syntax errors"
+        fi
     else
-        check_warn "docker-compose.yml may have syntax errors"
+        check_info "Docker not installed - skipping docker-compose.yml validation"
     fi
 else
     check_info "Not using Docker Compose"
