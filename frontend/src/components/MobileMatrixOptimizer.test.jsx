@@ -267,7 +267,7 @@ describe('MobileMatrixOptimizer Component', () => {
     test('updates on window resize', async () => {
       mockWindow(1920, 1080, 'Mozilla/5.0 (Windows)');
       
-      const { container, rerender } = render(
+      const { container } = render(
         <MobileMatrixOptimizer>
           <div>Content</div>
         </MobileMatrixOptimizer>
