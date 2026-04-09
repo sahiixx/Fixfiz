@@ -23,12 +23,12 @@ class AIModelConfig:
     O3_MINI = "o3-mini"  # Latest reasoning (if available)
     
     # Anthropic Latest Models  
-    CLAUDE_3_5_SONNET_20250219 = "claude-3-5-sonnet-20250219"  # Latest Claude (Feb 2025) - Best for coding
-    CLAUDE_3_5_SONNET = "claude-3-5-sonnet-20241022"  # Previous stable version
+    CLAUDE_3_5_SONNET_V2 = "claude-3-5-sonnet-20241022-v2"  # Latest Claude v2 - Best for coding
+    CLAUDE_3_5_SONNET = "claude-3-5-sonnet-20241022"  # Stable version
     CLAUDE_3_5_HAIKU = "claude-3-5-haiku-20241022"  # Fast and efficient
     
     # Google Latest Models
-    GEMINI_2_0_FLASH = "gemini-2.0-flash-exp"  # Latest Gemini - Multimodal, real-time
+    GEMINI_2_0_FLASH = "gemini-2.0-flash"  # Latest Gemini - Multimodal, real-time
     GEMINI_1_5_PRO = "gemini-1.5-pro-latest"  # Stable version
     GEMINI_1_5_FLASH = "gemini-1.5-flash-latest"  # Fast version
     
@@ -55,14 +55,21 @@ class AIModelConfig:
             "best_for": "fast reasoning tasks",
             "cost": "low"
         },
-        "claude-3-5-sonnet-20250219": {
+        "claude-3-5-sonnet-20241022": {
             "provider": "anthropic",
             "strengths": ["coding", "analysis", "writing", "200k_context"],
             "max_tokens": 200000,
             "best_for": "coding, long document analysis, detailed writing",
             "cost": "moderate"
         },
-        "gemini-2.0-flash-exp": {
+        "claude-3-5-sonnet-20241022-v2": {
+            "provider": "anthropic",
+            "strengths": ["coding", "analysis", "writing", "200k_context", "improved_reasoning"],
+            "max_tokens": 200000,
+            "best_for": "advanced coding, long document analysis, detailed writing",
+            "cost": "moderate"
+        },
+        "gemini-2.0-flash": {
             "provider": "google",
             "strengths": ["multimodal", "real_time", "fast", "vision"],
             "max_tokens": 1000000,
@@ -82,7 +89,7 @@ class UpgradedAIService:
         self.api_key = settings.emergent_llm_key or settings.openai_api_key
         self.default_model = AIModelConfig.GPT_4O
         self.reasoning_model = AIModelConfig.O1_MINI
-        self.coding_model = AIModelConfig.CLAUDE_3_5_SONNET_20250219
+        self.coding_model = AIModelConfig.CLAUDE_3_5_SONNET
         self.fast_model = AIModelConfig.GEMINI_2_0_FLASH
         
         logger.info(f"🚀 Upgraded AI Service initialized with latest 2025 models (API key configured: {bool(self.api_key)})")
@@ -187,7 +194,8 @@ Problem:
                 enhanced_prompt += f"\n\nContext: {json.dumps(context, indent=2)}"
             
             session_id = f"reasoning_{task_type}"
-            chat = await self.create_chat_session(session_id, model=model, temperature=0.3)
+            # o1 models only support temperature=1
+            chat = await self.create_chat_session(session_id, model=model, temperature=1.0)
             
             user_message = UserMessage(text=enhanced_prompt)
             response = await chat.send_message(user_message)

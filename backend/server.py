@@ -45,12 +45,29 @@ from integrations.sendgrid_integration import sendgrid_integration
 from integrations.voice_ai_integration import voice_ai_integration
 from integrations.vision_ai_integration import vision_ai_integration
 
-# Configure logging
+# Configure logging first (before other imports)
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# Import optimizations
+OPTIMIZATIONS_ENABLED = False
+try:
+    from cache_manager import cache_manager, cached
+    from error_handlers import register_error_handlers
+    from i18n import i18n, get_language_from_header
+    from rate_limiter import RateLimitMiddleware
+    from request_tracker import RequestIDMiddleware
+    from health_check import get_health_status
+    from security_headers import SecurityHeadersMiddleware, get_security_headers_config
+    from metrics_middleware import MetricsMiddleware
+    OPTIMIZATIONS_ENABLED = True
+    logger.info("✅ All optimization modules loaded successfully")
+except ImportError as e:
+    logger.warning(f"⚠️ Optimization modules not found: {e}, using defaults")
+    OPTIMIZATIONS_ENABLED = False
 
 # Create FastAPI app
 app = FastAPI(
@@ -66,6 +83,14 @@ security = HTTPBearer()
 # Create API router
 api_router = APIRouter(prefix=settings.api_prefix)
 
+# Register error handlers
+if OPTIMIZATIONS_ENABLED:
+    try:
+        register_error_handlers(app)
+        logger.info("✅ Error handlers registered")
+    except Exception as e:
+        logger.warning(f"Failed to register error handlers: {e}")
+
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -74,6 +99,50 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Add GZip compression middleware
+from fastapi.middleware.gzip import GZipMiddleware
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
+# Add Request ID tracking middleware
+if OPTIMIZATIONS_ENABLED:
+    try:
+        app.add_middleware(RequestIDMiddleware)
+        logger.info("✅ Request ID tracking enabled")
+    except Exception as e:
+        logger.warning(f"Failed to add Request ID middleware: {e}")
+
+# Add Rate Limiting middleware
+if OPTIMIZATIONS_ENABLED:
+    try:
+        app.add_middleware(
+            RateLimitMiddleware,
+            enabled=True,
+            requests_per_minute=60,
+            requests_per_hour=1000,
+            exempt_paths=["/api/health", "/docs", "/openapi.json", "/redoc"]
+        )
+        logger.info("✅ Rate limiting enabled (60/min, 1000/hour)")
+    except Exception as e:
+        logger.warning(f"Failed to add Rate Limiting middleware: {e}")
+
+# Add Security Headers middleware
+if OPTIMIZATIONS_ENABLED:
+    try:
+        environment = settings.environment if hasattr(settings, 'environment') else 'production'
+        security_config = get_security_headers_config(environment)
+        app.add_middleware(SecurityHeadersMiddleware, config=security_config)
+        logger.info("✅ Security headers enabled")
+    except Exception as e:
+        logger.warning(f"Failed to add Security Headers middleware: {e}")
+
+# Add Metrics middleware
+if OPTIMIZATIONS_ENABLED:
+    try:
+        app.add_middleware(MetricsMiddleware)
+        logger.info("✅ Metrics tracking enabled")
+    except Exception as e:
+        logger.warning(f"Failed to add Metrics middleware: {e}")
 
 # Analytics middleware
 class AnalyticsMiddleware(BaseHTTPMiddleware):
@@ -110,9 +179,48 @@ app.add_middleware(AnalyticsMiddleware)
 
 # Health check endpoint
 @api_router.get("/health")
-async def health_check():
-    """Health check endpoint"""
+async def health_check(detailed: bool = False):
+    """
+    Health check endpoint
+    
+    Args:
+        detailed: If True, return comprehensive system status
+    
+    Returns:
+        Basic or detailed health status
+    """
+    if OPTIMIZATIONS_ENABLED:
+        try:
+            return await get_health_status(detailed=detailed)
+        except Exception as e:
+            logger.error(f"Enhanced health check failed: {e}")
+    
+    # Fallback to basic health check
     return {"status": "healthy", "timestamp": datetime.utcnow(), "service": "nowhere-digital-api"}
+
+@api_router.get("/metrics")
+async def get_metrics_endpoint():
+    """
+    Get application metrics
+    
+    Returns:
+        Application performance metrics
+    """
+    try:
+        from metrics_collector import get_metrics
+        metrics = get_metrics()
+        return StandardResponse(
+            success=True,
+            message="Metrics retrieved successfully",
+            data=metrics
+        )
+    except Exception as e:
+        logger.error(f"Error getting metrics: {e}")
+        return StandardResponse(
+            success=False,
+            message="Failed to get metrics",
+            data={"error": str(e)}
+        )
 
 # Contact Form Endpoints
 @api_router.post("/contact", response_model=StandardResponse)
@@ -2096,6 +2204,18 @@ async def startup_event():
     """Initialize database connection and agent orchestrator on startup"""
     await connect_to_db()
     
+    # Create database indexes for performance
+    if OPTIMIZATIONS_ENABLED:
+        try:
+            from database_indexes import create_all_indexes
+            result = await create_all_indexes()
+            if result.get("success"):
+                logger.info("✅ Database indexes created successfully")
+            else:
+                logger.warning(f"⚠️ Database index creation had issues: {result.get('error')}")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not create database indexes: {e}")
+    
     # Initialize agent orchestrator
     await orchestrator.initialize()
     logger.info("Agent orchestrator initialized")
@@ -2109,7 +2229,16 @@ async def startup_event():
     await performance_optimizer.initialize()
     logger.info("Performance optimization system initialized")
     
-    logger.info("NOWHERE Digital API started successfully")
+    # Start cache cleanup background task
+    if OPTIMIZATIONS_ENABLED:
+        try:
+            from cache_manager import cache_cleanup_task
+            asyncio.create_task(cache_cleanup_task())
+            logger.info("✅ Cache cleanup background task started")
+        except Exception as e:
+            logger.warning(f"⚠️ Could not start cache cleanup task: {e}")
+    
+    logger.info("🚀 NOWHERE Digital API started successfully with optimizations")
 
 @app.on_event("shutdown")
 async def shutdown_event():
