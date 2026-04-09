@@ -224,7 +224,7 @@
 ### Infrastructure:
 - **Deployment**: Kubernetes
 - **Environment**: Emergent.sh
-- **Preview**: https://backend-hardening.preview.emergentagent.com
+- **Preview**: https://create-25.preview.emergentagent.com
 - **Production**: https://fix-it-6.emergent.host
 
 ---
@@ -294,6 +294,7 @@
 
 ### Production URLs:
 - **Preview**: https://backend-hardening.preview.emergentagent.com
+- **Preview**: https://create-25.preview.emergentagent.com
 - **Production**: https://fix-it-6.emergent.host
 - **API**: https://fix-it-6.emergent.host/api
 
