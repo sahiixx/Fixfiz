@@ -46,7 +46,7 @@ const MobileMatrixOptimizer = ({ children, className = "" }) => {
     <div className={`${className} ${mobileClasses} ${orientationClasses} ${touchClasses}`}>
       {/* Mobile Navigation Optimization */}
       {isMobile && (
-        <style jsx>{`
+        <style>{`
           .mobile-optimized {
             /* Optimize scrolling on mobile */
             -webkit-overflow-scrolling: touch;
@@ -132,7 +132,7 @@ export const MobileMatrixRain = ({ className = "" }) => {
     return (
       <div className={`absolute inset-0 pointer-events-none opacity-30 ${className}`}>
         <div className="matrix-mobile-rain" />
-        <style jsx>{`
+        <style>{`
           .matrix-mobile-rain {
             background: linear-gradient(
               180deg,
@@ -165,7 +165,7 @@ export const MobileMatrixText = ({ children, className = "" }) => {
     <div className={`${className} ${isMobile ? 'mobile-matrix-text' : ''}`}>
       {children}
       {isMobile && (
-        <style jsx>{`
+        <style>{`
           .mobile-matrix-text {
             font-size: clamp(1.5rem, 6vw, 3rem);
             line-height: 1.2;
