@@ -1,6 +1,6 @@
 # My Plugin
 
-Test plugin
+Connect with Dubai business services and APIs
 
 ## Installation
 
@@ -18,7 +18,7 @@ Describe how to use your plugin.
 
 ## Author
 
-Plugin Developer
+NOWHERE Digital
 
 ## License
 
