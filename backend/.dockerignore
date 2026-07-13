@@ -1,0 +1,40 @@
+# Secrets — NEVER bake into the image. Real keys are provided as runtime env
+# vars on the host (Render/Railway/Fly env UI), per DEPLOY.md §5.
+.env
+.agency.env
+*.env
+*.env.*
+!*.env.example
+
+# Python caches / build artifacts
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Local logs (the container creates its own logs/ at runtime)
+logs/
+*.log
+
+# Git / IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Scratch + backup files (not app code)
+_*.sh
+_*.py
+_deploytest*
+*.bak
+*.backup
+**/*.backup
+
+# Dockerfile itself doesn't need to be in the image
+Dockerfile
+.dockerignore
+
+# Keep everything else: server.py, config.py, services/, integrations/,
+# routes/, core/, agents/, agency_personas/, plugins/, etc.
