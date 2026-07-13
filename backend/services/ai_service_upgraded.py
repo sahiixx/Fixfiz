@@ -1,16 +1,88 @@
 """
 UPGRADED AI SERVICE - 2025 Latest Models & Features
 Integrates cutting-edge AI models with real-time capabilities
+
+Rewritten 2026-07-13: the private `emergentintegrations.llm.chat.LlmChat`
+wrapper (and its transitive `litellm` dependency + 7 accepted CVEs) has been
+removed. We now call OpenAI directly via the official `openai` SDK. To keep
+every internal call site (`chat = await self.create_chat_session(...)`;
+`await chat.send_message(UserMessage(text=...))`) unchanged, a small local
+`UserMessage` dataclass and an async `_ChatSession` adapter stand in for the
+old types. Non-OpenAI model names (claude-*, gemini-*) route to gpt-4o, which
+covers reasoning/vision/multimodal.
 """
-from emergentintegrations.llm.chat import LlmChat, UserMessage
 from config import settings
 import logging
+import os
 from typing import Dict, Any, Optional, List, AsyncIterator
 import asyncio
 import json
 from datetime import datetime
 
+from openai import AsyncOpenAI
+
 logger = logging.getLogger(__name__)
+
+_BASE_URL = os.getenv("OPENAI_BASE_URL") or None
+
+
+class UserMessage:
+    """Minimal stand-in for emergentintegrations.UserMessage.
+
+    Holds the text prompt and optional file content (images) for vision calls.
+    Kept so the dozens of internal ``UserMessage(text=...)`` call sites compile
+    unchanged after the emergentintegrations removal.
+    """
+
+    def __init__(self, text: str = "", file_contents: Optional[List[Any]] = None):
+        self.text = text
+        self.file_contents = file_contents or []
+
+
+class _ChatSession:
+    """Async adapter that mimics the old ``LlmChat`` fluent builder.
+
+    Built by ``UpgradedAIService.create_chat_session``; ``send_message`` issues
+    a single chat-completion call to OpenAI using the stored system message,
+    model, and sampling params.
+    """
+
+    def __init__(self, client: AsyncOpenAI, system_message: str, model: str,
+                 max_tokens: int, temperature: float):
+        self._client = client
+        self._system_message = system_message
+        self._model = model
+        self._max_tokens = max_tokens
+        self._temperature = temperature
+
+    async def send_message(self, user_message: UserMessage) -> str:
+        # Build the user content. If file_contents carries image data, emit the
+        # OpenAI vision multipart content format; otherwise plain text.
+        content: Any = user_message.text
+        if user_message.file_contents:
+            parts: List[Any] = []
+            if user_message.text:
+                parts.append({"type": "text", "text": user_message.text})
+            for fc in user_message.file_contents:
+                data_url = getattr(fc, "data_url", None)
+                if data_url:
+                    parts.append({"type": "image_url", "image_url": {"url": data_url}})
+            content = parts or user_message.text
+
+        kwargs: Dict[str, Any] = {
+            "model": self._model,
+            "messages": [
+                {"role": "system", "content": self._system_message},
+                {"role": "user", "content": content},
+            ],
+        }
+        if self._model.startswith(("o1", "o3")):
+            kwargs["temperature"] = 1
+        else:
+            kwargs["max_tokens"] = self._max_tokens
+            kwargs["temperature"] = self._temperature
+        resp = await self._client.chat.completions.create(**kwargs)
+        return resp.choices[0].message.content or ""
 
 class AIModelConfig:
     """Latest AI Model Configurations (2025)"""
@@ -89,49 +161,55 @@ class UpgradedAIService:
         self.api_key = settings.emergent_llm_key or settings.openai_api_key
         self.default_model = AIModelConfig.GPT_4O
         self.reasoning_model = AIModelConfig.O1_MINI
-        self.coding_model = AIModelConfig.CLAUDE_3_5_SONNET
-        self.fast_model = AIModelConfig.GEMINI_2_0_FLASH
-        
+        # Coding/fast slots previously pointed at Claude 3.5 / Gemini 2.0, which
+        # were routed through litellm. With litellm gone we use OpenAI models so
+        # the reported `model_used` always matches the model actually called.
+        self.coding_model = AIModelConfig.GPT_4O
+        self.fast_model = AIModelConfig.GPT_4O_MINI
+        self._client: Optional[AsyncOpenAI] = None
+
         logger.info(f"🚀 Upgraded AI Service initialized with latest 2025 models (API key configured: {bool(self.api_key)})")
-    
+
+    def _get_client(self) -> AsyncOpenAI:
+        if self._client is None:
+            self._client = AsyncOpenAI(api_key=self.api_key, base_url=_BASE_URL)
+        return self._client
+
+    def _resolve_model(self, requested: Optional[str] = None) -> str:
+        """Map provider-specific model names to an OpenAI-acceptable model.
+
+        emergentintegrations previously routed claude-*/gemini-* through
+        litellm; that bridge is gone, so those names fall back to gpt-4o.
+        """
+        model = requested or self.default_model
+        if not model or model.startswith(("claude-", "gemini-")):
+            return AIModelConfig.GPT_4O
+        return model
+
     async def create_chat_session(
-        self, 
-        session_id: str, 
+        self,
+        session_id: str,
         system_message: str = None,
         model: str = None,
         temperature: float = 0.7,
         max_tokens: int = 4096
-    ) -> LlmChat:
+    ) -> _ChatSession:
         """Create enhanced chat session with latest models"""
-        
+
         if not system_message:
             system_message = self._get_enhanced_system_message()
-        
-        if not model:
-            model = self.default_model
-        
+
+        resolved = self._resolve_model(model or self.default_model)
+        model_config = AIModelConfig.MODEL_CAPABILITIES.get(resolved, {})
+
         try:
-            # Get model configuration
-            model_config = AIModelConfig.MODEL_CAPABILITIES.get(model, {})
-            provider = model_config.get("provider", "openai")
-            
-            chat = LlmChat(
-                api_key=self.api_key,
-                session_id=session_id,
-                system_message=system_message
-            )
-            
-            # Configure with latest model
-            chat.with_model(provider, model)
-            
-            # Configure parameters using with_params (keyword arguments)
-            chat.with_params(
+            return _ChatSession(
+                client=self._get_client(),
+                system_message=system_message,
+                model=resolved,
                 max_tokens=min(max_tokens, model_config.get("max_tokens", 4096)),
-                temperature=temperature
+                temperature=temperature,
             )
-            
-            return chat
-            
         except Exception as e:
             logger.error(f"Error creating enhanced chat session: {e}")
             raise
@@ -413,9 +491,9 @@ and provide comprehensive insights by connecting information across modalities."
             chat = await self.create_chat_session(
                 session_id,
                 system_message=system_message,
-                model=AIModelConfig.GEMINI_2_0_FLASH  # Best multimodal support
+                model=AIModelConfig.GPT_4O  # multimodal (text+vision) via OpenAI
             )
-            
+
             prompt = f"Task: {task}\n\n"
             if text:
                 prompt += f"Text Input: {text}\n\n"
@@ -423,12 +501,12 @@ and provide comprehensive insights by connecting information across modalities."
                 prompt += f"Images provided: {len(images)}\n\n"
             if audio:
                 prompt += "Audio input provided\n\n"
-            
+
             prompt += "Provide comprehensive analysis across all input modalities."
-            
+
             user_message = UserMessage(text=prompt)
             response = await chat.send_message(user_message)
-            
+
             return {
                 "success": True,
                 "analysis": response,
@@ -437,7 +515,7 @@ and provide comprehensive insights by connecting information across modalities."
                     "images": len(images) if images else 0,
                     "audio": bool(audio)
                 },
-                "model_used": AIModelConfig.GEMINI_2_0_FLASH
+                "model_used": AIModelConfig.GPT_4O
             }
             
         except Exception as e:
