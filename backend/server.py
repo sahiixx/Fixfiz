@@ -1,10 +1,10 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, BackgroundTasks, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, BackgroundTasks, Query, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import List, Optional, Dict, Any
 import logging
 from pathlib import Path
@@ -19,6 +19,7 @@ from database import connect_to_db, close_db_connection, get_database
 from models import *
 from services.email_service import email_service
 from services.ai_service import ai_service
+from services import agency_engine
 
 # Import agent system
 from agents.agent_orchestrator import orchestrator
@@ -265,6 +266,57 @@ async def create_contact_form(
         logger.error(f"Error creating contact form: {e}")
         raise HTTPException(status_code=500, detail="Failed to submit contact form")
 
+@api_router.post("/leads", response_model=StandardResponse)
+async def create_lead(lead_data: ContactFormCreate, background_tasks: BackgroundTasks):
+    """
+    Lead capture with WhatsApp follow-up. Stores the lead (same shape as a
+    contact form, tagged source=lead) and dispatches a WhatsApp message to the
+    lead's phone via Twilio. When Twilio WhatsApp creds are absent the lead is
+    still stored and the response honestly reports `whatsapp.not_configured`.
+    """
+    try:
+        db = get_database()
+
+        record = lead_data.dict()
+        record["source"] = "lead"
+        contact_form = ContactForm(**lead_data.dict())
+        await db.contact_forms.insert_one({**contact_form.dict(), "source": "lead"})
+
+        # Email notifications (same as contact form), best-effort in background.
+        background_tasks.add_task(email_service.send_contact_form_notification, contact_form.dict())
+        background_tasks.add_task(email_service.send_contact_confirmation, contact_form.dict())
+
+        # WhatsApp follow-up. Await so the response reflects the real outcome.
+        phone = (lead_data.phone or "").strip()
+        whatsapp = {"status": "skipped", "reason": "no phone provided"}
+        if phone:
+            wa_message = (
+                f"Hi {lead_data.name or 'there'}, thanks for reaching out to NOWHERE.ai about "
+                f"{lead_data.service.value if hasattr(lead_data.service, 'value') else lead_data.service}. "
+                f"We've received your message and our team will follow up shortly. "
+            )
+            try:
+                whatsapp = await twilio_integration.send_whatsapp(phone, wa_message)
+            except Exception as we:
+                logger.error(f"WhatsApp dispatch error: {we}")
+                whatsapp = {"error": str(we), "channel": "whatsapp"}
+
+        # Analytics
+        await db.analytics.update_one(
+            {"analytics_date": date.today().isoformat()},
+            {"$inc": {"contact_forms": 1}},
+            upsert=True,
+        )
+
+        return StandardResponse(
+            success=True,
+            message="Lead captured" + ("" if whatsapp.get("status") == "skipped" else " — WhatsApp follow-up attempted"),
+            data={"id": contact_form.id, "whatsapp": whatsapp},
+        )
+    except Exception as e:
+        logger.error(f"Error creating lead: {e}")
+        raise HTTPException(status_code=500, detail="Failed to capture lead")
+
 @api_router.get("/contact", response_model=List[ContactForm])
 async def get_contact_forms(
     status: Optional[ContactStatus] = None,
@@ -504,6 +556,33 @@ async def analyze_business_problem(
     except Exception as e:
         logger.error(f"Error analyzing business problem: {e}")
         raise HTTPException(status_code=500, detail="Failed to analyze business problem")
+
+# ---------------------------------------------------------------------------
+# Agency engine — curated agency-agents personas run on the live Ollama
+# runtime. Real LLM agents behind the NOWHERE.ai roster. Honest degradation
+# when Ollama is offline (returns a clear error, never crashes).
+# ---------------------------------------------------------------------------
+@api_router.get("/agency/health")
+async def agency_health_endpoint():
+    h = await agency_engine.health()
+    return StandardResponse(success=h.get("reachable", False), message="agency engine health", data=h)
+
+@api_router.get("/agency/roster")
+async def agency_roster():
+    return StandardResponse(success=True, message="agency roster", data=agency_engine.list_roster())
+
+@api_router.post("/agency/run/{agent_key}", response_model=StandardResponse)
+async def agency_run(agent_key: str, payload: Dict[str, Any] = Body(...)):
+    """Run a curated persona against a task via Ollama. Body: {"task": "...", "model"?: "..."}."""
+    task = str(payload.get("task", "")).strip()
+    model = payload.get("model")  # optional override
+    result = await agency_engine.run_agent(agent_key, task, model=str(model) if model else None)
+    ok = "error" not in result
+    return StandardResponse(
+        success=ok,
+        message="agent completed" if ok else "agent run failed",
+        data=result,
+    )
 
 @api_router.get("/content/recommendations")
 async def get_service_recommendations(
@@ -1621,6 +1700,21 @@ async def get_insights_summary(days: int = Query(7, ge=1, le=90)):
 # PHASE 5: ENTERPRISE SECURITY & PERFORMANCE
 # ==========================================
 
+def get_current_user(request: Request) -> Dict[str, Any]:
+    """
+    FastAPI dependency: verify the Bearer JWT and return its payload.
+    Raises 401 if missing/invalid. Wire onto sensitive routes with
+    `Depends(get_current_user)` to actually enforce auth server-side.
+    """
+    auth = request.headers.get("authorization") or ""
+    if not auth.lower().startswith("bearer "):
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    token = auth.split(" ", 1)[1].strip()
+    payload = security_manager.decode_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+    return payload
+
 # Security Management Endpoints
 @api_router.post("/security/users/create", response_model=StandardResponse)
 async def create_user(user_data: Dict[str, Any]):
@@ -1666,6 +1760,35 @@ async def login_user(request: Request, credentials: Dict[str, str]):
     except Exception as e:
         logger.error(f"Error during authentication: {e}")
         raise HTTPException(status_code=500, detail="Authentication failed")
+
+@api_router.post("/auth/register", response_model=StandardResponse)
+async def register_customer(request: Request, payload: Dict[str, Any] = Body(...)):
+    """
+    Self-service customer signup. Creates a "customer" role user with a
+    reasonable password policy (min 8) and returns a JWT directly so the
+    frontend can sign in with a single call. Public endpoint (no auth).
+    """
+    try:
+        email = payload.get("email", "")
+        password = payload.get("password", "")
+        name = payload.get("name", "")
+        ip_address = request.client.host if request.client else "127.0.0.1"
+        user_agent = request.headers.get("user-agent", "unknown")
+
+        result = await security_manager.register_customer(email, password, name, ip_address, user_agent)
+        if "error" in result:
+            raise HTTPException(status_code=400, detail=result["error"])
+
+        return StandardResponse(
+            success=True,
+            message="Account created",
+            data=result,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error during registration: {e}")
+        raise HTTPException(status_code=500, detail="Failed to register")
 
 @api_router.post("/security/permissions/validate", response_model=StandardResponse)
 async def validate_permission(validation_data: Dict[str, Any]):
@@ -1937,8 +2060,8 @@ async def get_payment_packages():
         raise HTTPException(status_code=500, detail="Failed to get payment packages")
 
 @api_router.post("/integrations/payments/create-session", response_model=StandardResponse)
-async def create_payment_session(request: Request, payment_data: Dict[str, Any]):
-    """Create Stripe checkout session"""
+async def create_payment_session(request: Request, payment_data: Dict[str, Any], user: Dict[str, Any] = Depends(get_current_user)):
+    """Create Stripe checkout session (requires an authenticated session)."""
     try:
         package_id = payment_data.get("package_id")
         host_url = payment_data.get("host_url") or str(request.base_url).rstrip("/")
@@ -1979,6 +2102,73 @@ async def get_payment_status(session_id: str):
     except Exception as e:
         logger.error(f"Error getting payment status: {e}")
         raise HTTPException(status_code=500, detail="Failed to get payment status")
+
+@api_router.post("/integrations/payments/webhook")
+async def stripe_webhook(request: Request):
+    """
+    Stripe Checkout fulfilment webhook. Verifies the Stripe-Signature when
+    STRIPE_WEBHOOK_SECRET is set (using the `stripe` library if available);
+    records paid checkout sessions in the `payments` collection. Always
+    returns 200 so Stripe doesn't retry. Without a webhook secret the event
+    is still logged (unsigned/test mode) but marked unverified.
+    """
+    try:
+        body = await request.body()
+        sig = request.headers.get("stripe-signature", "")
+        secret = os.getenv("STRIPE_WEBHOOK_SECRET", "")
+        event = None
+        verified = False
+
+        if secret:
+            try:
+                import stripe as _stripe  # type: ignore
+                _stripe.api_key = os.getenv("STRIPE_API_KEY", "")
+                event = _stripe.Webhook.construct_event(body, sig, secret)
+                verified = True
+            except ImportError:
+                logger.warning("stripe lib not installed; webhook accepted unsigned")
+            except Exception as ve:
+                logger.warning(f"Stripe webhook signature verification failed: {ve}")
+                # Return 200 anyway — a bad signature is usually a misconfigured secret, not a retry-worthy error.
+                return {"received": True, "verified": False, "error": "invalid signature"}
+
+        if event is None:
+            try:
+                event = json.loads(body.decode("utf-8") or "{}")
+            except Exception:
+                event = {}
+
+        etype = event.get("type", "") if isinstance(event, dict) else ""
+        db = get_database()
+        record = {
+            "event_type": etype,
+            "verified": verified,
+            "received_at": datetime.now(timezone.utc).isoformat(),
+            "raw": event if isinstance(event, dict) else {},
+        }
+
+        # Fulfil paid checkouts.
+        if etype in ("checkout.session.completed", "checkout.session.async_payment_succeeded"):
+            obj = event.get("data", {}).get("object", {}) if isinstance(event, dict) else {}
+            record["session_id"] = obj.get("id")
+            record["payment_status"] = obj.get("payment_status")
+            record["amount_total"] = obj.get("amount_total")
+            record["currency"] = obj.get("currency")
+            record["status"] = "paid"
+            await db.payments.update_one(
+                {"session_id": obj.get("id")},
+                {"$set": record},
+                upsert=True,
+            )
+            logger.info(f"Stripe checkout fulfilled: {obj.get('id')} ({obj.get('payment_status')})")
+        else:
+            await db.payment_events.insert_one(record)
+
+        return {"received": True, "verified": verified, "type": etype}
+    except Exception as e:
+        logger.error(f"Stripe webhook error: {e}")
+        # Still 200 to stop Stripe retrying on our internal errors.
+        return {"received": False, "error": str(e)}
 
 # Twilio SMS Endpoints
 @api_router.post("/integrations/sms/send-otp", response_model=StandardResponse)

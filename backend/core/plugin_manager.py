@@ -90,7 +90,11 @@ class PluginManager:
     Handles plugin discovery, loading, lifecycle management
     """
     
-    def __init__(self, plugins_directory: str = "/app/plugins"):
+    def __init__(self, plugins_directory: str = None):
+        # Default "/app/plugins" assumes the Docker WORKDIR; allow a local
+        # override via PLUGINS_DIRECTORY so the server boots outside Docker.
+        if plugins_directory is None:
+            plugins_directory = os.getenv("PLUGINS_DIRECTORY", "/app/plugins")
         self.plugins_directory = Path(plugins_directory)
         self.loaded_plugins: Dict[str, PluginInterface] = {}
         self.plugin_metadata: Dict[str, PluginMetadata] = {}

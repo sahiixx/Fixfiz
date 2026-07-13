@@ -17,6 +17,14 @@ from dataclasses import dataclass
 from database import get_database
 from services.ai_service import AIService
 
+# Persistent JWT secret: read from settings (config.py -> JWT_SECRET env/.env)
+# instead of regenerating a random value at every process start. A random
+# per-start secret invalidated all issued tokens on backend restart.
+try:
+    from config import settings as _settings
+except Exception:  # pragma: no cover - config always present in this app
+    _settings = None
+
 logger = logging.getLogger(__name__)
 
 class UserRole(Enum):
@@ -27,6 +35,7 @@ class UserRole(Enum):
     OPERATOR = "operator"
     VIEWER = "viewer"
     API_USER = "api_user"
+    CUSTOMER = "customer"  # self-service paying customer (register_customer)
 
 class Permission(Enum):
     # Agent Management
@@ -101,8 +110,10 @@ class SecurityManager:
         self.ai_service = AIService()
         
         # Security configuration
+        # JWT secret is persistent (from settings) so tokens survive restarts.
+        _persistent_secret = getattr(_settings, "jwt_secret", "") if _settings else ""
         self.config = {
-            "jwt_secret": secrets.token_urlsafe(32),
+            "jwt_secret": _persistent_secret or secrets.token_urlsafe(32),
             "jwt_expiry_hours": 24,
             "max_login_attempts": 5,
             "lockout_duration_minutes": 30,
@@ -140,6 +151,13 @@ class SecurityManager:
             ],
             UserRole.API_USER: [
                 Permission.API_READ_ONLY
+            ],
+            UserRole.CUSTOMER: [
+                # Paying self-service customer: operate their agents, see their
+                # analytics/insights/reports, read-only API. No user/system/tenant mgmt.
+                Permission.VIEW_AGENT_STATUS, Permission.CONTROL_AGENT,
+                Permission.VIEW_ANALYTICS, Permission.VIEW_INSIGHTS,
+                Permission.ACCESS_REPORTS, Permission.API_READ_ONLY
             ]
         }
         
@@ -345,7 +363,110 @@ class SecurityManager:
         except Exception as e:
             logger.error(f"Authentication error: {e}")
             return {"error": "Authentication failed"}
-    
+
+    async def register_customer(self, email: str, password: str, name: str = "", ip_address: str = "127.0.0.1", user_agent: str = "unknown") -> Dict[str, Any]:
+        """
+        Self-service signup for a paying customer. Lighter password policy
+        (min 8 chars) than the enterprise create_user path (12+ complex), a
+        fixed "customer" role, and returns a JWT directly so the frontend signs
+        in with one call. Duplicate emails are rejected.
+        """
+        try:
+            email = (email or "").strip().lower()
+            if not email or "@" not in email:
+                return {"error": "A valid email is required"}
+            if len(password or "") < 8:
+                return {"error": "Password must be at least 8 characters"}
+
+            db = get_database()
+            # Reject duplicate emails
+            existing = await db.users.find_one({"email": email})
+            if existing:
+                return {"error": "An account with this email already exists"}
+
+            user_id = f"user_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}_{secrets.token_hex(4)}"
+            role = UserRole.CUSTOMER.value
+            perms = [perm.value for perm in self._get_role_permissions(UserRole.CUSTOMER)]
+            user_record = {
+                "user_id": user_id,
+                "email": email,
+                "name": name or "",
+                "role": role,
+                "tenant_id": None,
+                "password_hash": self._hash_password(password),
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "last_login": datetime.now(timezone.utc).isoformat(),
+                "active": True,
+                "mfa_enabled": False,
+                "permissions": perms,
+            }
+            await db.users.insert_one(user_record)
+
+            token_payload = {
+                "user_id": user_id,
+                "email": email,
+                "name": name or "",
+                "role": role,
+                "tenant_id": None,
+                "permissions": perms,
+                "iat": datetime.now(timezone.utc),
+                "exp": datetime.now(timezone.utc) + timedelta(hours=self.config["jwt_expiry_hours"]),
+            }
+            token = jwt.encode(token_payload, self.config["jwt_secret"], algorithm="HS256")
+
+            session_id = secrets.token_urlsafe(32)
+            self.active_sessions[session_id] = {
+                "user_id": user_id,
+                "created_at": datetime.now(timezone.utc),
+                "ip_address": ip_address,
+                "user_agent": user_agent,
+            }
+
+            await self._log_audit_event(AuditEvent(
+                event_id=f"register_{user_id}",
+                user_id=user_id,
+                tenant_id=None,
+                action="REGISTER_CUSTOMER",
+                resource=f"user:{user_id}",
+                ip_address=ip_address,
+                user_agent=user_agent,
+                timestamp=datetime.now(timezone.utc).isoformat(),
+                success=True,
+                details={"email": email, "role": role},
+                risk_level="low",
+                compliance_tags=["authentication", "user_management"],
+            ))
+
+            return {
+                "token": token,
+                "session_id": session_id,
+                "user": {
+                    "user_id": user_id,
+                    "email": email,
+                    "name": name or "",
+                    "role": role,
+                    "tenant_id": None,
+                    "permissions": perms,
+                },
+                "expires_at": token_payload["exp"].isoformat(),
+            }
+        except Exception as e:
+            logger.error(f"Error registering customer: {e}")
+            return {"error": f"Failed to register: {str(e)}"}
+
+    def decode_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """Verify a JWT and return its payload, or None if invalid/expired."""
+        try:
+            payload = jwt.decode(
+                token,
+                self.config["jwt_secret"],
+                algorithms=["HS256"],
+                options={"require": ["exp", "iat"]},
+            )
+            return payload
+        except Exception:
+            return None
+
     async def validate_permission(self, user_id: str, permission: Permission, resource: str = None) -> bool:
         """Validate user permission for specific action"""
         try:

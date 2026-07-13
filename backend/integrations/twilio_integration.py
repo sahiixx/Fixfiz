@@ -50,11 +50,11 @@ class TwilioIntegration:
         try:
             if not self.client:
                 return {"error": "Twilio not configured", "test_mode": True}
-            
+
             from_num = from_number or os.getenv("TWILIO_PHONE_NUMBER")
             if not from_num:
                 return {"error": "No Twilio phone number configured"}
-            
+
             message_obj = self.client.messages.create(
                 body=message,
                 from_=from_num,
@@ -64,5 +64,34 @@ class TwilioIntegration:
         except Exception as e:
             logger.error(f"Twilio send SMS error: {e}")
             return {"error": str(e)}
+
+    async def send_whatsapp(self, to_number: str, message: str) -> Dict[str, Any]:
+        """
+        Send a WhatsApp message via Twilio. Both the sender and recipient are
+        addressed with the `whatsapp:` prefix (Twilio's WhatsApp channel).
+        Returns an honest "not configured" state when TWILIO creds are absent so
+        callers can store the lead + log instead of failing the request.
+        """
+        try:
+            if not self.client:
+                return {"error": "Twilio not configured", "test_mode": True, "channel": "whatsapp"}
+
+            from_num = os.getenv("TWILIO_WHATSAPP_NUMBER") or os.getenv("TWILIO_PHONE_NUMBER")
+            if not from_num:
+                return {"error": "No Twilio WhatsApp sender configured", "test_mode": True, "channel": "whatsapp"}
+
+            # Normalise to whatsapp:+E.164 form.
+            def _wa(n: str) -> str:
+                return n if n.lower().startswith("whatsapp:") else f"whatsapp:{n}"
+
+            message_obj = self.client.messages.create(
+                body=message,
+                from_=_wa(from_num),
+                to=_wa(to_number),
+            )
+            return {"sid": message_obj.sid, "status": message_obj.status, "channel": "whatsapp"}
+        except Exception as e:
+            logger.error(f"Twilio send WhatsApp error: {e}")
+            return {"error": str(e), "channel": "whatsapp"}
 
 twilio_integration = TwilioIntegration()
