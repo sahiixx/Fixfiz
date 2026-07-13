@@ -1,0 +1,73 @@
+# Render.com infrastructure-as-code for the Fixfiz FastAPI backend.
+#
+# Render reads this on "New → Blueprint" → "Connect repo" → picks
+# sahiixx/Fixfiz. It auto-creates the web service + env-var template.
+# You still paste the secret VALUES yourself in the Render dashboard —
+# this file declares the variable NAMES and non-secret defaults.
+#
+# Healthcheck hits /api/health; service is a Docker web service (the
+# Dockerfile at backend/ multi-stage python:3.11-slim + 4 uvicorn workers).
+
+services:
+  - type: web
+    name: nowhere-ai-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free           # Render free web service — sleeps after 15 min idle
+    healthCheckPath: /api/health
+    autoDeploy: true     # push to main → redeploy
+    # region: oregon     # default is oregon; pick nearest to your Mongo Atlas region
+    envVars:
+      # ---- Required, non-secret ----
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: DB_NAME
+        value: nowhere_digital
+      # ---- Required, secret — paste VALUES in the Render UI ----
+      - key: MONGO_URL
+        sync: false       # mark as secret in the Render UI; paste Atlas connection string
+      - key: JWT_SECRET
+        generateValue: true   # Render will generate a strong random value at first deploy
+                             # (or you can paste your own)
+      - key: CORS_ORIGINS
+        value: '["https://nowhere-ai.pages.dev","http://localhost:3000"]'
+        # ↑ CRITICAL: must be a JSON array string (config.py parses as JSON).
+        #   Replace the first entry with your real Pages URL once known.
+        #   Comma-separated (https://a,https://b) WILL CRASH the boot.
+      # ---- Agency engine (Ollama Cloud) — required for /api/agency/* ----
+      # config.py uses extra="forbid" on .env FILES but accepts unknown
+      # PROCESS env vars, so these go here as plain process env, not in
+      # any .env file shipped to the container.
+      - key: AGENCY_OLLAMA_URL
+        value: https://ollama.com
+      - key: AGENCY_OLLAMA_API_KEY
+        sync: false       # paste your Ollama Cloud key in the Render UI
+      - key: AGENCY_OLLAMA_MODEL
+        value: glm-5.2
+      - key: AGENCY_OLLAMA_TIMEOUT
+        value: "120"
+      # ---- Optional integrations (commented; uncomment + paste values as needed) ----
+      # - key: EMERGENT_LLM_KEY
+      #   sync: false
+      # - key: OPENAI_API_KEY
+      #   sync: false
+      # - key: STRIPE_API_KEY
+      #   sync: false
+      # - key: STRIPE_WEBHOOK_SECRET
+      #   sync: false
+      # - key: TWILIO_ACCOUNT_SID
+      #   sync: false
+      # - key: TWILIO_AUTH_TOKEN
+      #   sync: false
+      # - key: TWILIO_VERIFY_SERVICE
+      #   sync: false
+      # - key: TWILIO_PHONE_NUMBER
+      #   sync: false
+      # - key: TWILIO_WATSAPP_NUMBER
+      #   sync: false
+      # - key: SENDGRID_API_KEY
+      #   sync: false
