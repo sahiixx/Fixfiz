@@ -28,10 +28,45 @@ import aiohttp
 
 logger = logging.getLogger(__name__)
 
-# --- config (env-overridable, no secrets) ---
-_OLLAMA_URL = os.getenv("AGENCY_OLLAMA_URL", "http://localhost:11434").rstrip("/")
-_DEFAULT_MODEL = os.getenv("AGENCY_OLLAMA_MODEL", "llama3.2:1b")
-_TIMEOUT = float(os.getenv("AGENCY_OLLAMA_TIMEOUT", "120"))
+_BACKEND_ROOT = Path(__file__).resolve().parent.parent
+
+
+def _load_env_file(path: Path) -> Dict[str, str]:
+    """Minimal KEY=VALUE parser (no python-dotenv dependency). Ignores
+    comments and blank lines, strips surrounding quotes. Used for
+    .agency.env so the cloud creds never enter os.environ — config.py's
+    pydantic Settings use extra=forbid and would crash on unknown
+    AGENCY_OLLAMA_* keys if they leaked into the process environment."""
+    out: Dict[str, str] = {}
+    if not path.exists():
+        return out
+    for line in path.read_text(encoding="utf-8", errors="replace").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, _, v = line.partition("=")
+        out[k.strip()] = v.strip().strip('"').strip("'")
+    return out
+
+
+_AGENCY_ENV = _load_env_file(_BACKEND_ROOT / ".agency.env")
+
+
+def _cfg(name: str, fallback: str = "") -> str:
+    """Precedence: .agency.env -> process env -> fallback."""
+    return _AGENCY_ENV.get(name) or os.getenv(name) or fallback
+
+
+# --- config: AGENCY_* preferred; fall back to OLLAMA_*/JARVIS_OLLAMA_MODEL so
+#     the sahiixx-os Ollama Cloud env also works if exported into the process. ---
+_OLLAMA_URL = (_cfg("AGENCY_OLLAMA_URL") or _cfg("OLLAMA_URL") or "http://localhost:11434").rstrip("/")
+_DEFAULT_MODEL = _cfg("AGENCY_OLLAMA_MODEL") or _cfg("JARVIS_OLLAMA_MODEL") or "llama3.2:1b"
+_API_KEY = _cfg("AGENCY_OLLAMA_API_KEY") or _cfg("OLLAMA_API_KEY") or ""
+_TIMEOUT = float(_cfg("AGENCY_OLLAMA_TIMEOUT", "120") or "120")
+
+
+def _auth_headers() -> Dict[str, str]:
+    return {"Authorization": f"Bearer {_API_KEY}"} if _API_KEY else {}
 
 # Personas live one level up from services/ -> backend/agency_personas/
 _PERSONAS_DIR = Path(__file__).resolve().parent.parent / "agency_personas"
@@ -144,6 +179,7 @@ async def _ollama_chat(system_prompt: str, task: str, model: str) -> Dict[str, A
         async with session.post(
             f"{_OLLAMA_URL}/api/chat",
             json=payload,
+            headers=_auth_headers(),
             timeout=aiohttp.ClientTimeout(total=_TIMEOUT),
         ) as resp:
             data = await resp.json()
@@ -205,13 +241,14 @@ async def health() -> Dict[str, Any]:
     """Probe Ollama reachability + available models (for /api/agency/health)."""
     try:
         async with aiohttp.ClientSession() as session:
-            async with session.get(f"{_OLLAMA_URL}/api/tags", timeout=aiohttp.ClientTimeout(total=5)) as resp:
+            async with session.get(f"{_OLLAMA_URL}/api/tags", headers=_auth_headers(), timeout=aiohttp.ClientTimeout(total=5)) as resp:
                 data = await resp.json()
                 models = [m.get("name") for m in data.get("models", [])]
                 return {
                     "reachable": True,
                     "ollama_url": _OLLAMA_URL,
                     "default_model": _DEFAULT_MODEL,
+                    "cloud": bool(_API_KEY),
                     "models": models,
                     "persona_count": len(_PERSONAS),
                 }
@@ -220,6 +257,7 @@ async def health() -> Dict[str, Any]:
             "reachable": False,
             "ollama_url": _OLLAMA_URL,
             "default_model": _DEFAULT_MODEL,
+            "cloud": bool(_API_KEY),
             "error": str(e)[:200],
             "persona_count": len(_PERSONAS),
         }
